@@ -39,7 +39,7 @@ Object.assign(T.zh, {
 
 const IDS = Object.keys(RJ);
 const FIRST_FOLIO = 15;   // the History chapter ends on page 14
-const FADE_MS = 300;      // the book appearing over the shelf, and leaving it
+const FADE_MS = 360;      // the book leaving the shelf: book first, then the table (recipe-book.css)
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ── Text ──

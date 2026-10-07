@@ -12,20 +12,29 @@
 
 /* ── The book over the shelf ──
    .rb-stage is an .hb-stage (history-book.css sizes the book in it). It covers
-   the shelf page with the same dark table the History book lies on; the book
-   rises into place as it appears. A click on the table beside it closes it. */
-.rb-stage{
-  bottom:0;z-index:530;pointer-events:auto;cursor:zoom-out;
+   the shelf page with the same dark table the History book lies on. Opening:
+   the table darkens first, then the book rises onto it (fading both at once
+   shows the shelf through the book). Closing runs the other way round.
+   A click on the table beside the book closes it. */
+.rb-stage{z-index:530;bottom:0;pointer-events:auto;cursor:zoom-out}
+.rb-stage::before{
+  content:'';position:absolute;inset:0;
   background:#1C1208;
   background-image:radial-gradient(ellipse at 50% 46%,rgba(80,48,18,.45) 0%,transparent 60%);
-  opacity:0;transition:opacity .3s ease;
+  opacity:0;transition:opacity .22s ease .12s;
 }
 .rb-stage .hb-book{
-  cursor:auto;
-  transform:translateY(14px) scale(.985);transition:transform .35s cubic-bezier(.2,.7,.2,1);
+  position:relative;cursor:auto;
+  opacity:0;transform:translateY(18px) scale(.98);
+  transition:opacity .16s ease, transform .22s ease;
 }
-.rb-stage.shown{opacity:1}
-.rb-stage.shown .hb-book{transform:none}
+.rb-stage.shown::before{opacity:1;transition-delay:0s}
+.rb-stage.shown .hb-book{
+  opacity:1;transform:none;
+  transition:opacity .22s ease .14s, transform .4s cubic-bezier(.2,.7,.2,1) .14s;
+}
+/* the site's header changes from the shelf's daylight to the table's dark with it */
+.book-header{transition:background-color .3s ease, color .3s ease, border-color .3s ease}
 
 /* ── A recipe spread ── */
 .rb-recipe button{font:inherit;cursor:pointer}
@@ -126,5 +135,5 @@
 }
 
 @media (prefers-reduced-motion:reduce){
-  .rb-stage,.rb-stage .hb-book{transition:none}
+  .rb-stage::before,.rb-stage .hb-book,.rb-stage.shown::before,.rb-stage.shown .hb-book{transition:none}
 }
