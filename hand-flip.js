@@ -27,6 +27,11 @@ Object.assign(T.en, {
   'hand.denied': 'Camera access was blocked. Allow it in your browser to use hand mode.',
   'hand.error': 'Hand tracking could not start on this device.',
   'hand.privacy': 'Video stays on your device.',
+  'hand.sayHi': '👋 Say hi to open',
+  'hand.wave': 'Wave hello to open the notebook.',
+  'hand.hello': 'Hello! Opening your notebook…',
+  'hand.skip': 'Skip',
+  'hand.openInstead': 'Open the notebook instead',
 });
 Object.assign(T.zh, {
   'hand.toggle': '✋ 用手翻页',
@@ -40,6 +45,11 @@ Object.assign(T.zh, {
   'hand.denied': '摄像头被拒绝，请在浏览器中允许后再试。',
   'hand.error': '此设备无法启动手势识别。',
   'hand.privacy': '视频只在你的设备上处理。',
+  'hand.sayHi': '👋 挥手打开',
+  'hand.wave': '向镜头挥挥手，打开笔记本。',
+  'hand.hello': '你好！正在为你打开笔记本…',
+  'hand.skip': '跳过',
+  'hand.openInstead': '直接打开笔记本',
 });
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -248,12 +258,17 @@ const DRAG_FULL = 0.30;     // movement for a complete turn
 const SWIPE_DIST = 0.22;    // open-hand sweep that counts as a swipe…
 const SWIPE_MS = 320;       // …within this long
 const COOLDOWN_MS = 900;    // wait after a swipe before another
+const WAVE_SWING = 0.035;   // palm travel that counts as one swing of a wave
+const WAVE_MS = 1500;       // two direction changes within this long = a wave
 
-function createGesture({ flip, onState, aspect = 4 / 3 }){
+// mode 'turn' turns pages; mode 'wave' only listens for a hello wave.
+function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
+  let mode = 'turn';
   let pinched = false;
   let anchorX = 0, smoothX = null, dir = 0, refused = false;
   let trail = [];             // recent open-hand positions for swipe detection
   let lastSwipe = -Infinity;
+  let waveDir = 0, waveEdge = null, reversals = [];   // wave: current heading, furthest point, turn times
 
   // Distance in frame units, correcting x for the video's aspect ratio.
   const dist = (a, b) => Math.hypot((a.x - b.x) * aspect, a.y - b.y);
@@ -263,11 +278,35 @@ function createGesture({ flip, onState, aspect = 4 / 3 }){
     pinched = false; dir = 0; refused = false; smoothX = null;
   }
 
+  function resetWave(){ waveDir = 0; waveEdge = null; reversals = []; }
+
+  // A wave is an open palm swinging side to side: count the moments it
+  // changes direction after travelling at least WAVE_SWING.
+  function trackWave(palmX, now){
+    if(waveEdge === null){ waveEdge = palmX; return false; }
+    const moved = palmX - waveEdge;
+    if(waveDir === 0){
+      if(Math.abs(moved) > WAVE_SWING){ waveDir = Math.sign(moved); waveEdge = palmX; }
+    } else if(Math.sign(moved) === waveDir){
+      waveEdge = palmX;                                   // still heading the same way
+    } else if(Math.abs(moved) > WAVE_SWING){
+      waveDir = -waveDir; waveEdge = palmX;               // turned around
+      reversals = reversals.filter(t => now - t <= WAVE_MS).concat(now);
+      if(reversals.length >= 2){ resetWave(); return true; }
+    }
+    return false;
+  }
+
   function feed(landmarks, now = performance.now()){
     if(!landmarks){
-      letGo(); trail = [];
-      onState('noHand');
+      letGo(); trail = []; resetWave();
+      onState(mode === 'wave' ? 'wave' : 'noHand');
       return;
+    }
+    if(mode === 'wave'){
+      if(trackWave(1 - landmarks[9].x, now)){ mode = 'turn'; onWave(); }
+      else onState('wave');
+      return { pinched:false };
     }
     const size = dist(landmarks[0], landmarks[9]) || 1e-6;
     const gap = dist(landmarks[4], landmarks[8]) / size;
@@ -306,7 +345,12 @@ function createGesture({ flip, onState, aspect = 4 / 3 }){
     return { pinched, gap };
   }
 
-  return { feed, reset: letGo };
+  return {
+    feed,
+    reset(){ letGo(); trail = []; resetWave(); },
+    setMode(m){ mode = m; resetWave(); },
+    get mode(){ return mode; },
+  };
 }
 
 // ── CAMERA + UI ─────────────────────────────────────────────
@@ -319,6 +363,16 @@ function buildUI(){
   btn.dataset.i18n = 'hand.toggle';
   btn.textContent = t('hand.toggle');
 
+  const sayHi = document.createElement('button');
+  sayHi.className = 'hf-sayhi';
+  sayHi.type = 'button';
+  sayHi.dataset.i18n = 'hand.sayHi';
+  sayHi.textContent = t('hand.sayHi');
+  document.getElementById('cover').appendChild(sayHi);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'hf-backdrop';
+
   const panel = document.createElement('div');
   panel.className = 'hf-panel';
   panel.innerHTML = `
@@ -327,14 +381,16 @@ function buildUI(){
       <canvas></canvas>
     </div>
     <p class="hf-status" role="status" aria-live="polite"></p>
-    <p class="hf-privacy" data-i18n="hand.privacy">${t('hand.privacy')}</p>`;
+    <p class="hf-privacy" data-i18n="hand.privacy">${t('hand.privacy')}</p>
+    <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
-  document.body.append(panel, btn);
+  document.body.append(backdrop, panel, btn);
   return {
-    btn, panel,
+    btn, sayHi, backdrop, panel,
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
+    skip: panel.querySelector('.hf-skip'),
   };
 }
 
@@ -364,13 +420,17 @@ let handLandmarker = null;
 let stream = null;
 let running = false;
 let lastVideoTime = -1;
+let introTimer = null;
+let holdStatus = false;   // keep the "Hello!" message up while the intro plays out
 
 const gesture = createGesture({
   flip: Flip,
   onState: key => {
+    if(holdStatus) return;
     const k = 'hand.' + key;
     if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
   },
+  onWave: () => greeted(),
 });
 
 async function loadLandmarker(){
@@ -401,6 +461,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
+// Starts the camera and tracking. Resolves true once frames are flowing.
 async function start(){
   ui.panel.classList.add('open');
   ui.btn.setAttribute('aria-pressed', 'true');
@@ -413,19 +474,22 @@ async function start(){
       video:{ facingMode:'user', width:{ ideal:640 }, height:{ ideal:480 } },
       audio:false,
     });
-    if(ui.btn.getAttribute('aria-pressed') !== 'true'){ stop(); return; }  // turned off while loading
+    if(ui.btn.getAttribute('aria-pressed') !== 'true'){ stopCamera(); return false; }  // turned off while loading
     ui.video.srcObject = stream;
     await ui.video.play();
-    setI18n(ui.status, 'hand.noHand');
+    setI18n(ui.status, gesture.mode === 'wave' ? 'hand.wave' : 'hand.noHand');
     running = true;
     requestAnimationFrame(loop);
+    return true;
   } catch(err){
     console.warn('[hand-flip]', err);
     const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
     setI18n(ui.status, denied ? 'hand.denied' : 'hand.error');
+    setI18n(ui.skip, 'hand.openInstead');
     stopCamera();
     ui.btn.setAttribute('aria-pressed', 'false');
     setI18n(ui.btn, 'hand.toggle');
+    return false;
   }
 }
 
@@ -439,11 +503,80 @@ function stopCamera(){
 }
 
 function stop(){
+  endIntro();
   stopCamera();
+  gesture.setMode('turn');
   ui.panel.classList.remove('open');
   ui.btn.setAttribute('aria-pressed', 'false');
   setI18n(ui.btn, 'hand.toggle');
 }
+
+// ── WELCOME INTRO ───────────────────────────────────────────
+// "Say hi" on the cover → big mirror → wave → the mirror shrinks into the
+// corner → the cover rests for 2 s → it opens onto the first history page.
+
+const COVER_PAUSE_MS = 2000;
+
+function startIntro(){
+  setI18n(ui.skip, 'hand.skip');
+  gesture.setMode('wave');
+  document.body.classList.add('hf-intro');
+  ui.panel.classList.add('hero');
+  ui.backdrop.classList.add('open');
+  start();   // on failure the hero stays up showing why, with Skip to carry on
+}
+
+// Leave the big-mirror state. No-op if we're not in it.
+function endIntro(){
+  clearTimeout(introTimer);
+  holdStatus = false;
+  ui.backdrop.classList.remove('open');
+  document.body.classList.remove('hf-intro');
+  ui.panel.classList.remove('hero', 'greeted');
+}
+
+function greeted(){
+  setI18n(ui.status, 'hand.hello');
+  holdStatus = true;
+  ui.panel.classList.add('greeted');
+  introTimer = setTimeout(() => {
+    shrinkToCorner();
+    introTimer = setTimeout(() => {
+      holdStatus = false;
+      if(isCoverOpen()) Flip.turn(1);
+    }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
+  }, 700);
+}
+
+// FLIP technique: measure the big mirror, snap it to its corner size,
+// then animate from the old box to the new one with a single transform.
+function shrinkToCorner(){
+  const panel = ui.panel;
+  const first = panel.getBoundingClientRect();
+  ui.backdrop.classList.remove('open');
+  document.body.classList.remove('hf-intro');
+  panel.classList.remove('hero', 'greeted');
+  if(reducedMotion()) return;
+  const last = panel.getBoundingClientRect();
+  panel.style.transformOrigin = 'top left';
+  panel.style.transform =
+    `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${first.width / last.width})`;
+  panel.getBoundingClientRect();   // commit the starting frame
+  panel.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1)';
+  panel.style.transform = '';
+  panel.addEventListener('transitionend', () => {
+    panel.style.transition = panel.style.transformOrigin = '';
+  }, { once:true });
+}
+
+ui.sayHi.addEventListener('click', startIntro);
+
+// Skip: put the camera away and open the notebook the ordinary way.
+ui.skip.addEventListener('click', () => { stop(); openBook(); });
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && ui.panel.classList.contains('hero')) stop();
+});
 
 ui.btn.addEventListener('click', () => {
   ui.btn.getAttribute('aria-pressed') === 'true' ? stop() : start();
