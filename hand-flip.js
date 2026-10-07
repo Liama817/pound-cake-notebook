@@ -19,8 +19,8 @@ const MEDIAPIPE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${ME
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
 Object.assign(T.en, {
-  'hand.toggle': '✋ Turn pages by hand',
-  'hand.stop': '✋ Stop hand mode',
+  'hand.toggle': 'Turn pages by hand',
+  'hand.stop': 'Stop hand mode',
   'hand.loading': 'Loading hand tracking…',
   'hand.camera': 'Allow camera access to begin.',
   'hand.ready': 'Sweep left to turn the page. To go back, lower your hand, then sweep right.',
@@ -37,8 +37,8 @@ Object.assign(T.en, {
   'hand.openInstead': 'Open the notebook instead',
 });
 Object.assign(T.zh, {
-  'hand.toggle': '✋ 用手翻页',
-  'hand.stop': '✋ 关闭手势翻页',
+  'hand.toggle': '用手翻页',
+  'hand.stop': '关闭手势翻页',
   'hand.loading': '正在加载手势识别…',
   'hand.camera': '请允许使用摄像头。',
   'hand.ready': '向左划，翻到下一页。想翻回去：先放下手，再向右划。',
