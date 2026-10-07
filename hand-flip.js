@@ -104,8 +104,10 @@ function neighbourPage(page, dir){
   // Flip only moves between the book and the other sections.
   if(window.historyBook){
     if(page.kind === 'cover') return null;
-    // History turns inside the book; after it comes Recipes.
-    if(page.kind === 'history') return dir > 0 ? { kind:'recipes' } : null;
+    // History and (when the book holds it) Recipes turn inside the book; after them comes Tips.
+    if(page.kind === 'history' || (page.kind === 'recipes' && window.historyBook.recipes)){
+      return dir > 0 ? { kind: window.historyBook.recipes ? 'tips' : 'recipes' } : null;
+    }
   }
   switch(page.kind){
     case 'cover':   return dir > 0 ? { kind:'history', era:0 } : null;
@@ -152,7 +154,8 @@ const Flip = (() => {
   // unfold it the rest of the way. Dragging back below 0.5 swaps back.
   function pageFlip(dir, from, to){
     // History lives in the book's own stage when the book loaded.
-    const inBook = page => window.historyBook && page.kind === 'history';
+    const inBook = page => window.historyBook &&
+      (page.kind === 'history' || (page.kind === 'recipes' && window.historyBook.recipes));
     const elFor = page => inBook(page) ? window.historyBook.stage : document.getElementById('book-spread');
     const shade = document.createElement('div');
     shade.className = 'hf-shade';
@@ -306,19 +309,19 @@ const Surface = (() => {
   // (mid-edge, say) the leaf swings round like a tossed card.
   const cornerV = p => 0.9 + 0.1 * Math.min(1, Math.max(0, p));
 
-  let book = null;   // the book being turned: the recipe book when it's open, else the History book
   function begin(d, v){
     v = cornerV(0);
-    const rb = window.recipeBook;
-    if(rb && rb.visible){
-      if(rb.canTurn(d)) return grab(rb, d, v);
-      // Past either end of the recipes: back to the shelf, or on to the next chapter.
-      d < 0 ? rb.back() : rb.nextChapter();
-      return false;
-    }
     const hb = window.historyBook;
     if(hb && hb.visible){
-      if(hb.canTurn(d)) return grab(hb, d, v);
+      // On the Recipes shelf, cakes are chosen by pointing; a sweep forward goes on to the next chapter.
+      const onShelf = hb.recipes?.where() === 'shelf';
+      if(hb.canTurn(d) && !(onShelf && d > 0)){
+        const r = hb.drag.begin(d, v);
+        if(!r) return false;
+        on = r === true ? 'book' : null;   // 'played': a phone-sized book just turns
+        dir = d;
+        return true;
+      }
       if(d < 0 || hb.isClosed()) return false;
       // Past the last history spread: carry on into Recipes.
     }
@@ -327,33 +330,24 @@ const Surface = (() => {
     return true;
   }
 
-  function grab(b, d, v){
-    const r = b.drag.begin(d, v);
-    if(!r) return false;
-    book = b;
-    on = r === true ? 'book' : null;   // 'played': a phone-sized book just turns
-    dir = d;
-    return true;
-  }
-
   function move(p, v){
     if(on === 'book'){
       // The corner starts at the outer edge and travels across both pages;
       // past the spine (u = 0.5) the library will finish the turn.
       const u = dir > 0 ? 0.95 - p * 0.95 : 0.05 + p * 0.95;
-      book.drag.move(u, cornerV(p));
+      window.historyBook.drag.move(u, cornerV(p));
     } else if(on === 'flip'){
       Flip.update(p);
     }
   }
 
   function end(){
-    if(on === 'book') book.drag.end();
+    if(on === 'book') window.historyBook.drag.end();
     else if(on === 'flip') Flip.release();
     on = null;
   }
 
-  const busy = () => Flip.isBusy() || !!window.historyBook?.busy || !!(window.recipeBook?.visible && window.recipeBook.busy);
+  const busy = () => Flip.isBusy() || !!(window.historyBook && window.historyBook.busy);
   return { begin, move, end, busy };
 })();
 
@@ -754,30 +748,34 @@ const gesture = createGesture({
   onWave: () => greeted(),
 });
 
-// The recipe book (recipe-book.js), when it loaded and is open over the shelf.
-const bookRecipes = () => window.recipeBook?.visible ? window.recipeBook : null;
+// The Recipes chapter of the book (history-book.js), when the book loaded and is showing.
+const bookRecipes = () => window.historyBook?.recipes && window.historyBook.visible ? window.historyBook.recipes : null;
 
 const pointer = createPointer({
   // A cake being lifted (or the pages riffling to it) counts too: its recipe is about to open.
   cardOpen(){
-    return !!bookRecipes() || !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open;
+    const b = bookRecipes();
+    if(b){ const w = b.where(); return b.busy || (!!w && w !== 'shelf'); }
+    return !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open;
   },
   shelfActive(){
-    if(isCoverOpen() || window.recipeBook?.stage && !window.recipeBook.stage.classList.contains('away')) return false;
+    if(isCoverOpen()) return false;
+    const b = bookRecipes();
+    if(b) return b.where() === 'shelf';
     return !!window.recipeShelf && !!document.getElementById('recipes-panel')?.classList.contains('active');
   },
   sweepsTurnPages: () => !!bookRecipes(),
   cakeAt(u, v){
     const x = u * innerWidth, y = v * innerHeight, pad = 8;
-    const cakes = window.recipeShelf.cakes();
+    const cakes = bookRecipes() ? bookRecipes().cakes() : window.recipeShelf.cakes();
     const hit = cakes.find(el => {
       const r = el.getBoundingClientRect();
       return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
     });
     return hit ? hit.dataset.recipe : null;
   },
-  point: id => window.recipeShelf?.point(id),
-  pick: id => window.recipeShelf.pick(id),
+  point: id => (bookRecipes() || window.recipeShelf)?.point(id),
+  pick: id => (bookRecipes() || window.recipeShelf).pick(id),
   cursor(c, pinching, closing = 0){
     ui.cursor.hidden = !c;
     if(!c) return;

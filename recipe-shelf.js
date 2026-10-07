@@ -2,9 +2,8 @@
 // The Recipes section as a kitchen shelf in daylight, drawn in the project's
 // watercolor-illustration style: each recipe is a painted slice of cake on
 // its own porcelain plate, with a tag hanging from the shelf below it.
-// Choosing a cake lifts it off the shelf, then opens the recipe book at its
-// recipe (recipe-book.js), or the recipe card (openRecipeModal) if the book
-// couldn't load. Closing either sets the cake back down.
+// Choosing a cake lifts it off the shelf, then opens the existing recipe
+// card (openRecipeModal). Closing the card sets the cake back down.
 //
 // Replaces buildRecipesPage from index.html, so switching to Recipes and
 // changing language both render the shelf.
@@ -27,8 +26,7 @@ Object.assign(T.zh, {
   'shelf.prev': '上一章',
 });
 
-const LIFT_MS = 200;      // the cake rises off the shelf before its recipe opens
-const RETURNED_MS = 1800; // back from a recipe, its cake stays lit this long
+const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let liftedId = null;
 
@@ -174,7 +172,8 @@ function mirrorHandToggle(btn){
 const originalSwitch = window.switchSection;
 window.switchSection = function(s){
   originalSwitch(s);
-  document.body.classList.toggle('on-recipes', s === 'recipes');
+  // when the book holds the Recipes chapter (history-book.js), this page isn't shown
+  document.body.classList.toggle('on-recipes', s === 'recipes' && !window.historyBook?.recipes);
 };
 document.body.classList.toggle('on-recipes',
   !!document.querySelector('.tab-btn.active[data-section="recipes"]'));
@@ -191,34 +190,21 @@ function pick(id){
   if(!btn) return;
   liftedId = id;
   btn.classList.add('lifted');
-  setTimeout(() => window.recipeBook ? window.recipeBook.open(id) : openRecipeModal(id), reducedMotion() ? 0 : LIFT_MS);
+  setTimeout(() => openRecipeModal(id), reducedMotion() ? 0 : LIFT_MS);
 }
 
-// Set a cake back down after its recipe closes. Any tag may show a new stamp
-// (in the book, the reader may have turned on to other recipes and marked them).
-// returned: light the cake for a moment, so you can see where you were.
-let returnedTimer = 0;
-function settle(id = liftedId, { returned = false } = {}){
-  liftedId = null;
-  document.querySelectorAll('#recipes-panel .slice').forEach(b => {
-    b.classList.remove('lifted', 'returned');
-    const tag = b.querySelector('.slice-tag');
-    tag.querySelector('.tag-stamp')?.remove();
-    tag.insertAdjacentHTML('beforeend', stampFor(b.dataset.recipe));
-  });
-  const btn = id && document.querySelector(`#recipes-panel .slice[data-recipe="${id}"]`);
-  if(!btn) return;
-  clearTimeout(returnedTimer);
-  if(!returned) return;
-  btn.classList.add('returned');
-  returnedTimer = setTimeout(() => btn.classList.remove('returned'), RETURNED_MS);
-}
-
-// The recipe card (when the book couldn't load): set the cake down when it closes.
+// Set the cake back down when the card closes; its tag may show a new stamp.
 const originalClose = window.closeRecipeModal;
 window.closeRecipeModal = function(){
   originalClose();
-  if(!window.recipeBook) settle(liftedId, { returned:true });
+  const id = liftedId;
+  liftedId = null;
+  const btn = id && document.querySelector(`.slice[data-recipe="${id}"]`);
+  if(!btn) return;
+  btn.classList.remove('lifted');
+  const tag = btn.querySelector('.slice-tag');
+  tag.querySelector('.tag-stamp')?.remove();
+  tag.insertAdjacentHTML('beforeend', stampFor(id));
 };
 
 window.buildRecipesPage = buildShelf;
@@ -235,7 +221,6 @@ function point(id){
 window.recipeShelf = {
   pick,
   point,
-  settle,
   cakes: () => [...document.querySelectorAll('#recipes-panel .slice')],
   get open(){ return !!liftedId; },
 };

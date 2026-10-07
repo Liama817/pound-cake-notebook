@@ -213,17 +213,9 @@
 .shelf-row .slice:is(:hover, :focus-visible, .pointed) .slice-tag{transform:rotate(1.4deg)}
 .cabinet .slice:is(:hover, :focus-visible, .pointed) .tag-name{color:var(--ochre)}
 .slice:is(:hover, :focus-visible, .pointed) .plate-shadow{opacity:.55;transform:scale(.94)}
-/* A pointing hand is a coarser pointer than a mouse: the cake lifts higher, to read from across the room */
-.slice.pointed .slice-img{transform:translateY(-12%) scale(1.04)}
-/* Chosen: lifted off before its recipe opens */
+/* Chosen: lifted off before the recipe card opens */
 .slice.lifted .slice-img{transform:translateY(-16%) scale(1.05)}
 .slice.lifted .plate-shadow{opacity:.35;transform:scale(.85)}
-/* Back from its recipe: the cake is lit for a moment, then settles */
-.cabinet .slice.returned :is(.slice-img, .slice-bare){opacity:1}
-.slice.returned .slice-img{transform:translateY(-5%)}
-.slice.returned .tag-name{color:var(--ochre)}
-.slice-tag{transition:transform .4s ease, box-shadow .6s ease}
-.cabinet .slice.returned .slice-tag{box-shadow:inset 0 0 0 1px rgba(255,236,190,.55), 0 0 0 3px rgba(226,184,74,.45), 0 1px 2px rgba(60,40,15,.35)}
 
 /* ── Foot of the page: the neighbouring chapters, and hand mode ── */
 .shelf-foot{
