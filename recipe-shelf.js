@@ -12,18 +12,14 @@
 // closeRecipeModal, getStampState, currentLang, T, t.
 
 Object.assign(T.en, {
-  'shelf.plate': 'Plate II',
-  'shelf.caption': 'The pâtisserie shelf: {n} pound cakes, one slice of each.',
-  'shelf.choose': 'Choose a cake, on the shelf or below, to open its recipe.',
+  'shelf.count': '{n} cakes on the shelf',
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
   'shelf.next': 'Next chapter',
   'shelf.prev': 'Previous chapter',
 });
 Object.assign(T.zh, {
-  'shelf.plate': '图二',
-  'shelf.caption': '甜品店的橱架：{n} 款磅蛋糕，每款一片。',
-  'shelf.choose': '在架上或下方选一款蛋糕，打开它的食谱。',
+  'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
   'shelf.next': '下一章',
@@ -46,16 +42,16 @@ function stampFor(id){
 // of that painting, plus a patch of bare shelf to put behind it: at rest the
 // painting shows alone; when a cake is hovered or chosen, its patch and
 // cut-out appear and the cut-out rises.
-// Boxes are in % of the painting's width (1536px): x, y, w, h of the cut-out.
-// The painting carries no text: names live in the index below it, laid out
-// like the shelf (upper row, lower row), and the two light up together.
+// Boxes are in % of the painting's width (1536px): x, y, w, h of the cut-out;
+// tx is the plate's centre within the box; ty the label's top within the box
+// (on the shelf lip for the upper floor, on the plinth for the lower).
 const SCENE = {
-  orange:       { x:10.742, y:21.484, w:19.531, h:14.323 },
-  marble:       { x:39.388, y:21.484, w:19.857, h:14.323 },
-  classic:      { x:69.01,  y:21.484, w:20.182, h:14.323 },
-  rum:          { x:10.417, y:44.922, w:20.182, h:14.974 },
-  blueberry:    { x:39.388, y:44.922, w:20.182, h:14.974 },
-  chocZucchini: { x:68.685, y:44.922, w:20.182, h:14.974 },
+  orange:       { x:10.742, y:21.484, w:19.531, h:14.323, tx: 9.635, ty:14.714 },
+  marble:       { x:39.388, y:21.484, w:19.857, h:14.323, tx: 9.896, ty:14.714 },
+  classic:      { x:69.01,  y:21.484, w:20.182, h:14.323, tx: 9.896, ty:14.714 },
+  rum:          { x:10.417, y:44.922, w:20.182, h:14.974, tx:10.067, ty:15.234 },
+  blueberry:    { x:39.388, y:44.922, w:20.182, h:14.974, tx: 9.993, ty:15.234 },
+  chocZucchini: { x:68.685, y:44.922, w:20.182, h:14.974, tx: 9.863, ty:15.234 },
 };
 
 // A pencil-drawn arrow for the chapter links.
@@ -73,36 +69,19 @@ function tagHTML(id, r, i){
           <span class="tag-name">${name}</span>
           <span class="tag-src">${source}</span>
         </span>
-        <span class="stamp-slot">${stampFor(id)}</span>
+        ${stampFor(id)}
       </span>`;
 }
 
-// One entry of the index under the painting. These are the keyboard and
-// screen-reader way in; the cakes in the painting are for the pointer.
-function indexHTML(id, r, i){
-  const name = t('recipe.' + id) || r.name;
-  const source = currentLang === 'zh' ? (r.zh_source || r.source) : r.source;
-  const tags = (currentLang === 'zh' ? (r.zh_tags || r.tags) : r.tags) || [];
-  return `
-    <li>
-      <button class="ix-item" type="button" data-recipe="${id}">
-        <span class="ix-no">${i + 1}</span>
-        <span class="ix-name">${name}</span>
-        <span class="ix-src">${source}</span>
-        <span class="ix-tags">${tags.join(' · ')}</span>
-        <span class="stamp-slot">${stampFor(id)}</span>
-      </button>
-    </li>`;
-}
-
-function sceneCakeHTML(id, r){
+function sceneCakeHTML(id, r, i){
   const b = SCENE[id];
   const name = t('recipe.' + id) || r.name;
   return `
     <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}"
-            tabindex="-1" aria-hidden="true" style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw">
+            style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw;--tx:${b.tx}cqw;--ty:${b.ty}cqw">
       <img class="slice-bare" src="./images/shelf/scene/${id}-bare.webp" alt="" draggable="false">
       <img class="slice-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false">
+      ${tagHTML(id, r, i)}
     </button>`;
 }
 
@@ -137,22 +116,18 @@ function buildShelf(){
     for(let k = 0; k < all.length; k += 2) rows += shelfRow(all.slice(k, k + 2).join(''));
   } else {
     rows = `
-      <figure class="plate">
-        <div class="cabinet">
-          <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
-          ${entries.map(([id, r]) => sceneCakeHTML(id, r)).join('')}
-        </div>
-        <figcaption><b>${t('shelf.plate')}</b>${t('shelf.caption').replace('{n}', entries.length)}</figcaption>
-      </figure>
-      <ol class="shelf-index" aria-label="${t('recipes.title')}">${entries.map(([id, r], i) => indexHTML(id, r, i)).join('')}</ol>`;
+      <div class="cabinet">
+        <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
+        ${entries.map(([id, r], i) => sceneCakeHTML(id, r, i)).join('')}
+      </div>`;
   }
   panel.innerHTML = `
     <div class="shelf-wrap">
       <header class="shelf-head">
         <h1 class="shelf-title" data-i18n="recipes.title">${t('recipes.title')}</h1>
         <div class="head-note">
+          <p class="shelf-count">${t('shelf.count').replace('{n}', entries.length)}</p>
           <p class="shelf-sub" data-i18n="recipes.subtitle">${t('recipes.subtitle')}</p>
-          <p class="shelf-hint">${t('shelf.choose')}</p>
         </div>
       </header>
       <div class="shelf">${rows}</div>
@@ -162,20 +137,8 @@ function buildShelf(){
         <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span>${ARROW_R}</span></button>
       </nav>
     </div>`;
-  panel.querySelectorAll('.slice, .ix-item').forEach(btn => {
+  panel.querySelectorAll('.slice').forEach(btn => {
     btn.addEventListener('click', () => pick(btn.dataset.recipe));
-  });
-  // a cake and its index entry light up together
-  const pair = (id, on) => {
-    panel.querySelector(`.slice[data-recipe="${id}"]`)?.classList.toggle('pointed', on);
-    panel.querySelector(`.ix-item[data-recipe="${id}"]`)?.classList.toggle('lit', on);
-  };
-  panel.querySelectorAll('.cabinet .slice, .ix-item').forEach(el => {
-    const id = el.dataset.recipe;
-    el.addEventListener('pointerenter', () => pair(id, true));
-    el.addEventListener('pointerleave', () => pair(id, false));
-    el.addEventListener('focus', () => pair(id, true));
-    el.addEventListener('blur', () => pair(id, false));
   });
   panel.querySelectorAll('[data-go]').forEach(btn => {
     btn.addEventListener('click', () => switchSection(btn.dataset.go));
@@ -234,7 +197,9 @@ window.closeRecipeModal = function(){
   const btn = id && document.querySelector(`.slice[data-recipe="${id}"]`);
   if(!btn) return;
   btn.classList.remove('lifted');
-  document.querySelectorAll(`[data-recipe="${id}"] .stamp-slot`).forEach(slot => { slot.innerHTML = stampFor(id); });
+  const tag = btn.querySelector('.slice-tag');
+  tag.querySelector('.tag-stamp')?.remove();
+  tag.insertAdjacentHTML('beforeend', stampFor(id));
 };
 
 window.buildRecipesPage = buildShelf;
