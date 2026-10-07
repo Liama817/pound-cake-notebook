@@ -46,20 +46,25 @@ function stampFor(id){
 // tx is the plate's centre within the box; ty the label's top within the box
 // (on the shelf lip for the upper floor, on the plinth for the lower).
 const SCENE = {
-  orange:       { x:10.417, y:20.833, w:20.182, h:14.974, tx: 9.93, ty:15.77 },
-  marble:       { x:39.388, y:20.833, w:19.857, h:14.974, tx: 9.86, ty:15.77 },
-  classic:      { x:68.88,  y:20.833, w:20.052, h:14.974, tx: 9.99, ty:15.77 },
-  rum:          { x:10.417, y:44.271, w:20.182, h:15.299, tx:10.12, ty:15.93 },
-  blueberry:    { x:39.388, y:44.271, w:20.182, h:15.299, tx: 9.96, ty:15.93 },
-  chocZucchini: { x:68.49,  y:44.271, w:20.182, h:15.299, tx:10.09, ty:15.93 },
+  orange:       { x:10.742, y:21.484, w:19.531, h:14.323, tx: 9.635, ty:14.714 },
+  marble:       { x:39.388, y:21.484, w:19.857, h:14.323, tx: 9.896, ty:14.714 },
+  classic:      { x:69.01,  y:21.484, w:20.182, h:14.323, tx: 9.896, ty:14.714 },
+  rum:          { x:10.417, y:44.922, w:20.182, h:14.974, tx:10.067, ty:15.234 },
+  blueberry:    { x:39.388, y:44.922, w:20.182, h:14.974, tx: 9.993, ty:15.234 },
+  chocZucchini: { x:68.685, y:44.922, w:20.182, h:14.974, tx: 9.863, ty:15.234 },
 };
+
+// A pencil-drawn arrow for the chapter links.
+const ARROW = '<path d="M2 9.6c9-.9 22-.3 33 .3M27.5 3.5c2.6 2.4 5.2 4.6 8 6.5-2.9 1.6-5.8 3.6-8.3 6.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>';
+const ARROW_R = `<svg class="arrow" viewBox="0 0 38 20" aria-hidden="true">${ARROW}</svg>`;
+const ARROW_L = `<svg class="arrow flip" viewBox="0 0 38 20" aria-hidden="true">${ARROW}</svg>`;
 
 function tagHTML(id, r, i){
   const name = t('recipe.' + id) || r.name;
   const source = currentLang === 'zh' ? (r.zh_source || r.source) : r.source;
   return `
       <span class="slice-tag">
-        <span class="tag-no">Nº ${i + 1}</span>
+        <span class="tag-no"><small>No.</small>${i + 1}</span>
         <span class="tag-text">
           <span class="tag-name">${name}</span>
           <span class="tag-src">${source}</span>
@@ -127,9 +132,9 @@ function buildShelf(){
       </header>
       <div class="shelf">${rows}</div>
       <nav class="shelf-foot">
-        <button class="foot-prev" type="button" data-go="history"><small data-i18n="shelf.prev">${t('shelf.prev')}</small><span>← <span data-i18n="nav.history">${t('nav.history')}</span></span></button>
+        <button class="foot-prev" type="button" data-go="history"><small data-i18n="shelf.prev">${t('shelf.prev')}</small><span>${ARROW_L}<span data-i18n="nav.history">${t('nav.history')}</span></span></button>
         <button class="foot-hand" type="button" hidden></button>
-        <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span> →</span></button>
+        <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span>${ARROW_R}</span></button>
       </nav>
     </div>`;
   panel.querySelectorAll('.slice').forEach(btn => {
