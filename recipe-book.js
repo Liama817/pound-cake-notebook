@@ -6,8 +6,9 @@
 // the baker's note on the left page, ingredients and method on the right.
 //
 // history-book.js puts recipePages() into the book, then calls attach() with
-// the book. Choosing a cake riffles through the pages to its recipe; "Back to
-// the shelf" (or Escape) riffles back.
+// the book. Choosing a cake turns one page and its recipe is open; "Back to
+// the shelf" (or Escape) turns one page back. Pages further apart than one
+// turn are reached the same way (see turnTo below).
 //
 // Relies on globals from index.html: RJ, T, t, currentLang, getStampState.
 
@@ -40,7 +41,9 @@ Object.assign(T.zh, {
 
 const IDS = Object.keys(RJ);
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const LIFT_MS = 380;   // the cake rises off the shelf before the pages turn
+const LIFT_MS = 160;   // the cake rises off the shelf before the page turns
+const TURN_MS = 700;   // a turn to or from a recipe: brisk, the same for every cake
+const RETURNED_MS = 1800;   // back on the shelf, the cake you came from stays lit this long
 
 // ── The fold-out ──
 // The painting (images/shelf/scene/cabinet.webp, 1536×1024, the same one the
@@ -234,8 +237,9 @@ function toggleStamp(id, kind){
 // ── Behaviour ──
 // attach(pageFlip, options)
 //   start: index of the chapter's first page; root: the book element;
+//   pages: every page element of the book, in order;
 //   isOpen(): whether the book is showing; onNextChapter(): go on to Tips.
-export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
+export function attach(pageFlip, { start, root, pages, isOpen, onNextChapter }){
   const pageOf = id => start + 2 + IDS.indexOf(id) * 2;
   const landscape = () => pageFlip.getOrientation() === 'landscape';
   const spreadOf = p => landscape() ? (p === 0 ? 0 : Math.floor((p + 1) / 2)) : p;
@@ -249,34 +253,77 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
     return IDS[Math.floor((i - start - 2) / 2)] || null;
   }
 
-  // ── Riffle: turn page after page until `target` is open, quickly when it is far ──
-  let riffle = null;
-  const normalTime = pageFlip.getSettings().flippingTime;
-  function riffleTo(target, done){
-    const from = spreadOf(index()), to = spreadOf(target);
-    if(from === to){ done?.(); return; }
-    const steps = Math.abs(to - from);
-    riffle = { dir: Math.sign(to - from), to, done };
-    pageFlip.getSettings().flippingTime = steps === 1 ? normalTime : Math.max(140, Math.min(420, 1300 / steps));
-    turn();
+  // ── One turn to any page ──
+  // Turning page by page to a recipe five spreads on means watching five other
+  // recipes go by. Instead, the spread next to this one borrows the target's
+  // pages for a single turn: going forward, the turn reveals the borrowed
+  // pages, then the book quietly settles on the real ones (they look the
+  // same); going back, the book first settles on the borrowing spread, then
+  // turns back. Both swaps happen between two frames, so nothing jumps.
+  const pagesOf = sp => landscape() ? (sp === 0 ? [0] : [2 * sp - 1, 2 * sp]) : [sp];
+  const firstPage = sp => pagesOf(sp)[0];
+  // Swap two pages' contents: their children, and our classes and data (not the library's own).
+  function swapPages(a, b){
+    const own = el => [...el.classList].filter(c => !c.startsWith('stf__'));
+    const ca = own(a), cb = own(b), ea = a.dataset.era, eb = b.dataset.era;
+    const kids = [...a.childNodes];
+    a.replaceChildren(...b.childNodes);
+    b.replaceChildren(...kids);
+    a.classList.remove(...ca); a.classList.add(...cb);
+    b.classList.remove(...cb); b.classList.add(...ca);
+    if(eb === undefined) delete a.dataset.era; else a.dataset.era = eb;
+    if(ea === undefined) delete b.dataset.era; else b.dataset.era = ea;
   }
+  function swapSpreads(s1, s2){
+    const p1 = pagesOf(s1), p2 = pagesOf(s2);
+    p1.forEach((p, k) => swapPages(pages[p], pages[p2[k]]));
+  }
+
+  let riffle = null;   // the turn under way: { dir, to, swapped, done, started }
+  const normalTime = pageFlip.getSettings().flippingTime;
   // 'fold_corner' is only the corner lifting under the mouse: a turn can start from it.
   const ready = () => ['read', 'fold_corner'].includes(pageFlip.getState());
+  function turnTo(target, done){
+    const from = spreadOf(index()), to = spreadOf(target);
+    if(from === to){ done?.(); return; }
+    const dir = Math.sign(to - from);
+    riffle = { dir, to, done, swapped:null };
+    pageFlip.getSettings().flippingTime = TURN_MS;
+    if(Math.abs(to - from) > 1){
+      if(dir > 0){
+        // the next spread wears the target's pages for the turn
+        riffle.swapped = [from + 1, to];
+        swapSpreads(from + 1, to);
+      } else {
+        // the spread beside the target wears this one's pages; settle there first
+        riffle.swapped = [to + 1, from];
+        swapSpreads(to + 1, from);
+        pageFlip.turnToPage(firstPage(to + 1));
+      }
+    }
+    requestAnimationFrame(turn);
+  }
   function turn(){
     if(!riffle) return;
     if(!ready()){ setTimeout(turn, 30); return; }
+    riffle.started = true;
     riffle.dir > 0 ? pageFlip.flipNext('bottom') : pageFlip.flipPrev('bottom');
   }
+  // (the quiet jump to the borrowing spread is a 'flip' too: only the turn's own one counts)
   pageFlip.on('flip', () => {
-    if(!riffle) return;
-    if(spreadOf(index()) !== riffle.to){ setTimeout(turn, 20); return; }
-    const done = riffle.done;
+    if(!riffle?.started) return;
+    const { swapped, to, done } = riffle;
     riffle = null;
     pageFlip.getSettings().flippingTime = normalTime;
+    if(swapped){
+      swapSpreads(...swapped);
+      if(spreadOf(index()) !== to) pageFlip.turnToPage(firstPage(to));
+    }
     done?.();
   });
 
   const cakeButtons = id => root.querySelectorAll(`.rb-cake[data-recipe="${id}"]`);
+  let returnedTimer = 0;
 
   let picking = false;   // a cake is lifted and its recipe is about to open
   function pick(id){
@@ -284,12 +331,19 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
     const btns = cakeButtons(id);
     btns.forEach(b => b.classList.add('lifted'));
     picking = true;
-    setTimeout(() => riffleTo(pageOf(id), () => { picking = false; btns.forEach(b => b.classList.remove('lifted', 'pointed', 'hover')); }),
+    setTimeout(() => turnTo(pageOf(id), () => { picking = false; btns.forEach(b => b.classList.remove('lifted', 'pointed', 'hover')); }),
       reducedMotion() ? 0 : LIFT_MS);
   }
+  // Back to the shelf; the cake you came from stays lit for a moment, so you know where you were.
   function back(){
-    if(riffle || !where() || where() === 'shelf') return;
-    riffleTo(start);
+    const id = where();
+    if(riffle || !id || id === 'shelf') return;
+    turnTo(start, () => {
+      root.querySelectorAll('.rb-cake.returned').forEach(b => b.classList.remove('returned'));
+      cakeButtons(id).forEach(b => b.classList.add('returned'));
+      clearTimeout(returnedTimer);
+      returnedTimer = setTimeout(() => cakeButtons(id).forEach(b => b.classList.remove('returned')), RETURNED_MS);
+    });
   }
   function point(id){
     root.querySelectorAll('.rb-cake').forEach(b => b.classList.toggle('pointed', b.dataset.recipe === id));
@@ -338,7 +392,7 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
   }
 
   return {
-    start, pageOf, where, pick, back, point, mark, scrollBy, riffleTo,
+    start, pageOf, where, pick, back, point, mark, scrollBy, riffleTo: turnTo,
     cakes: () => where() === 'shelf' ? [...root.querySelectorAll('.rb-cake:not([data-twin])')] : [],
     get busy(){ return !!riffle || picking; },
     refresh(){ root.querySelectorAll('.hb-page').forEach(fill); },

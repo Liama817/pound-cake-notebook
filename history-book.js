@@ -101,7 +101,8 @@ const pageFlip = new PageFlip(bookEl, {
   autoSize: false,            // history-book.css sizes the book to fit the screen; the
                               // library's own sizing makes it as wide as the window
 });
-pageFlip.loadFromHTML(buildPages());
+const pages = buildPages();
+pageFlip.loadFromHTML(pages);
 document.body.classList.add('hb-ready');
 
 const pageIndex = () => pageFlip.getCurrentPageIndex();
@@ -114,10 +115,13 @@ function setTabs(section){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.section === section));
 }
 // On History pages a click anywhere turns the page; Recipes pages hold
-// buttons and text to read, so there only a click on a corner turns it.
+// buttons and text to read, so there a click doesn't turn it, and the
+// corners don't curl up under the mouse as if the page were about to go.
 function syncChapter(){
   const i = pageIndex();
-  pageFlip.getSettings().disableFlipByClick = chapterAt(i) === 'recipes';
+  const settings = pageFlip.getSettings();
+  settings.disableFlipByClick = chapterAt(i) === 'recipes';
+  settings.showPageCorners = !settings.disableFlipByClick;
   if(i > 0 && !stage.classList.contains('away')) setTabs(chapterAt(i));
 }
 
@@ -147,11 +151,14 @@ pageFlip.on('changeState', e => {
 pageFlip.on('flip', e => {
   stage.classList.remove('opening');
   if(e.data === 0) showLanding(); else leaveLanding();
+  // A turn that stood in for several (recipe-book.js) settles on its real page just after this.
+  setTimeout(syncChapter, 0);
 });
 
 const recipes = attachRecipes(pageFlip, {
   start: RECIPES_START,
   root: bookEl,
+  pages,
   isOpen: () => !stage.classList.contains('away') && !isClosed(),
   onNextChapter: () => switchSection('tips'),
 });

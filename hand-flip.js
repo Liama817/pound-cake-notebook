@@ -303,10 +303,19 @@ const Surface = (() => {
   let on = null;   // 'book' | 'flip' | null
   let dir = 0;
 
+  // In the book, the hand moves the page's bottom corner along the same path
+  // as the library's own turn (a mouse click): from just inside the corner,
+  // sinking slightly, to the far page's bottom edge. Held anywhere else
+  // (mid-edge, say) the leaf swings round like a tossed card.
+  const cornerV = p => 0.9 + 0.1 * Math.min(1, Math.max(0, p));
+
   function begin(d, v){
+    v = cornerV(0);
     const hb = window.historyBook;
     if(hb && hb.visible){
-      if(hb.canTurn(d)){
+      // On the Recipes shelf, cakes are chosen by pointing; a sweep forward goes on to the next chapter.
+      const onShelf = hb.recipes?.where() === 'shelf';
+      if(hb.canTurn(d) && !(onShelf && d > 0)){
         const r = hb.drag.begin(d, v);
         if(!r) return false;
         on = r === true ? 'book' : null;   // 'played': a phone-sized book just turns
@@ -325,8 +334,8 @@ const Surface = (() => {
     if(on === 'book'){
       // The corner starts at the outer edge and travels across both pages;
       // past the spine (u = 0.5) the library will finish the turn.
-      const u = dir > 0 ? 0.97 - p * 0.94 : 0.03 + p * 0.94;
-      window.historyBook.drag.move(u, v);
+      const u = dir > 0 ? 0.95 - p * 0.95 : 0.05 + p * 0.95;
+      window.historyBook.drag.move(u, cornerV(p));
     } else if(on === 'flip'){
       Flip.update(p);
     }
@@ -507,6 +516,7 @@ function createGesture({ surface, onState, onWave = () => {} }){
 
 const PINCH_ON = 0.25;      // thumb–index gap (in palm lengths) that counts as a pinch…
 const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids flicker).
+const PINCH_OPEN = 0.9;     // a gap this wide shows as a fully open cursor ring
                             // A fist's thumb rests about 0.4–0.5 from the index tip.
 const HOLD_MS = 700;        // how long a pose must be held to act
 const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
@@ -607,7 +617,9 @@ function createPointer(env){
     cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
     const id = env.cakeAt(cursor.u, cursor.v);
     env.point(id);
-    env.cursor(cursor, pinching);
+    // how close thumb and index are to a pinch: 0 apart … 1 touching
+    const closing = clamp01((PINCH_OPEN - shape.pinchGap) / (PINCH_OPEN - PINCH_ON));
+    env.cursor(cursor, pinching, closing);
     if(cursor.v > 0.9) env.scrollPage((cursor.v - 0.9) * 120);   // near the edge: bring more shelf into view
     if(cursor.v < 0.1) env.scrollPage((cursor.v - 0.1) * 120);
     if(pinchStarted && id){
@@ -657,10 +669,18 @@ function buildUI(){
   const cursor = document.createElement('div');
   cursor.className = 'hf-cursor';
   cursor.hidden = true;
+  cursor.innerHTML = '<span class="hf-cursor-dot"></span>';
 
-  document.body.append(backdrop, panel, btn, cursor);
+  // A held pose (open palm, 👍, 🤟): a ring that fills, and what will happen when it's full
+  const hold = document.createElement('div');
+  hold.className = 'hf-hold';
+  hold.hidden = true;
+  hold.innerHTML = '<span class="hf-hold-ring" aria-hidden="true"></span><span class="hf-hold-text"></span>';
+
+  document.body.append(backdrop, panel, btn, cursor, hold);
   return {
-    btn, sayHi, backdrop, panel, cursor,
+    btn, sayHi, backdrop, panel, cursor, hold,
+    holdText: hold.querySelector('.hf-hold-text'),
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
@@ -756,10 +776,11 @@ const pointer = createPointer({
   },
   point: id => (bookRecipes() || window.recipeShelf)?.point(id),
   pick: id => (bookRecipes() || window.recipeShelf).pick(id),
-  cursor(c, pinching){
+  cursor(c, pinching, closing = 0){
     ui.cursor.hidden = !c;
     if(!c) return;
     ui.cursor.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
+    ui.cursor.style.setProperty('--close', pinching ? 1 : closing.toFixed(2));
     ui.cursor.classList.toggle('pinch', !!pinching);
   },
   scrollCard(amount){
@@ -813,6 +834,27 @@ async function loadTracker(){
   }
 }
 
+// Holding a pose fills the ring on the page; when it acts, the ring says what it did.
+let holdShownUntil = 0;
+function showHold(p){
+  const status = p.status || '';
+  if(status.startsWith('hold.')){
+    ui.hold.hidden = false;
+    ui.hold.classList.remove('done');
+    ui.hold.style.setProperty('--p', p.progress.toFixed(3));
+    if(ui.holdText.dataset.i18n !== 'hand.' + status) setI18n(ui.holdText, 'hand.' + status);
+    holdShownUntil = 0;
+  } else if(p.flash && /^(un)?marked\./.test(status)){
+    ui.hold.hidden = false;
+    ui.hold.classList.add('done');
+    ui.hold.style.setProperty('--p', 1);
+    setI18n(ui.holdText, 'hand.' + status);
+    holdShownUntil = frameNow + 1400;
+  } else if(frameNow >= holdShownUntil){
+    ui.hold.hidden = true;
+  }
+}
+
 // One video frame: the Pointer looks first (it may hold sweeps back), then the sweep detector.
 let lastSweepAt = -Infinity;
 function handleFrame(hand, pose, now = performance.now()){
@@ -824,6 +866,7 @@ function handleFrame(hand, pose, now = performance.now()){
   const info = gesture.feed(hand, now, !p.claimed);
   if(info && info.active) lastSweepAt = now;
   if(p.flash) flashUntil = now + 1600;
+  showHold(p);
   if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
@@ -890,6 +933,8 @@ function stopCamera(){
 function stop(){
   endIntro();
   stopCamera();
+  pointer.release();
+  ui.hold.hidden = true;
   gesture.setMode('turn');
   ui.panel.classList.remove('open');
   ui.btn.setAttribute('aria-pressed', 'false');

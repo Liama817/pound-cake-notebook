@@ -79,9 +79,17 @@
   filter:drop-shadow(0 .9cqw .7cqw rgba(70,45,18,.28));
   transition:transform .5s cubic-bezier(.3,.7,.2,1), opacity .12s linear;
 }
-.rb-cake:is(:hover, :focus-visible, .hover, .pointed, .lifted) :is(.rb-cake-img, .rb-cake-bare){opacity:1}
-.rb-cake:is(:hover, :focus-visible, .hover, .pointed) .rb-cake-img{transform:translateY(-5%)}
+.rb-cake:is(:hover, :focus-visible, .hover, .pointed, .lifted, .returned) :is(.rb-cake-img, .rb-cake-bare){opacity:1}
+.rb-cake:is(:hover, :focus-visible, .hover, .returned) .rb-cake-img{transform:translateY(-5%)}
+/* a pointing hand is a coarser pointer than a mouse: lift higher, so it reads from across the room */
+.rb-cake.pointed .rb-cake-img{
+  transform:translateY(-14%) scale(1.05);
+  filter:drop-shadow(0 1.8cqw 1.2cqw rgba(70,45,18,.34));
+}
 .rb-cake.lifted .rb-cake-img{transform:translateY(-16%) scale(1.05)}
+/* the cake you just came back from: lit, then it settles over a second or so */
+.rb-cake.returned .rb-tag{box-shadow:inset 0 0 0 1px rgba(255,236,190,.55), 0 0 0 3px rgba(226,184,74,.45), 0 1px 2px rgba(60,40,15,.35)}
+.rb-tag{transition:box-shadow .6s ease}
 
 /* The label: a card in a small brass holder on the shelf edge below the cake */
 .rb-tag{
@@ -125,7 +133,7 @@
 .rb-tag-stamp:empty{display:none}
 .rb-tag-stamp.made{color:#4d6e36}
 .rb-tag-stamp.wish{color:#a34a34}
-.rb-cake:is(:hover, :focus-visible, .hover, .pointed) .rb-tag-name{color:var(--rb-ochre)}
+.rb-cake:is(:hover, :focus-visible, .hover, .pointed, .returned) .rb-tag-name{color:var(--rb-ochre)}
 
 /* ── A recipe spread ── */
 .rb-recipe button{font:inherit;cursor:pointer}
