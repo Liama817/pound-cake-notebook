@@ -24,8 +24,14 @@
 .shelf-wrap{
   width:100%;box-sizing:border-box;
   max-width:1280px;margin:0 auto;
-  padding:clamp(2rem,6vh,3.4rem) clamp(1.2rem,3vw,2.5rem) 2.2rem;
+  padding:clamp(1.2rem,4vh,3.4rem) clamp(1.2rem,3vw,2.5rem) clamp(1rem,2vh,2.2rem);
+  /* fill the window, so the shelf can size itself to the space left over
+     and the whole page fits without scrolling */
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;
 }
+/* the painting takes whatever height the heading and footer leave it */
+.shelf{flex:1 1 0;height:0;min-height:270px;display:flex;align-items:center;justify-content:center}
 
 
 /* ── Editorial heading: the title, and a note set over the third cake ── */
@@ -35,7 +41,7 @@
 }
 .shelf-title{
   font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:300;
-  font-size:clamp(3.6rem,8vw,6.6rem);line-height:.8;letter-spacing:-.01em;
+  font-size:clamp(3rem,6vw + 1vh,6.6rem);line-height:.8;letter-spacing:-.01em;
   color:var(--ink);margin:0;
 }
 .head-note{padding-bottom:.1rem}
@@ -45,17 +51,25 @@
   color:var(--ochre);
 }
 .shelf-sub{
-  margin:0;max-width:14.6em;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:1.22rem;line-height:1.38;color:var(--ink);
+  margin:0;max-width:14.6em;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:clamp(1rem,.6vw + .8vh,1.22rem);line-height:1.38;color:var(--ink);
 }
 
 /* ── The cabinet (wider screens) ──
    Positions are shares of the painting's width (cqw), set per cake from
    SCENE in recipe-shelf.js. */
+/* The painting, as large as the leftover height and the column allow: it
+   stretches to the height the shelf row gives it, its width follows from the
+   aspect ratio, and the two caps keep it within 1120px wide either way. */
+.cab-fit{
+  height:100%;width:auto;
+  aspect-ratio:1536 / 1024;
+  max-width:min(100%, 1120px);
+  max-height:calc(1120px / 1.5);   /* cap height too, so the ratio always holds */
+}
 .cabinet{
   container-type:inline-size;
   position:relative;isolation:isolate;
-  width:min(100%, 1120px);margin:clamp(1.5rem,4vh,2.6rem) auto clamp(2rem,5vw,3.5rem);
-  aspect-ratio:1536 / 1024;
+  width:100%;height:100%;
 }
 .cabinet-img{
   position:absolute;inset:0;width:100%;height:100%;
@@ -80,8 +94,15 @@
 .slice-bare{transition:opacity .12s linear}
 .cabinet .slice-tag{
   position:absolute;top:var(--ty);left:var(--tx);
-  width:26.4cqw;height:4.4cqw;translate:-50% 0;
+  width:25.6cqw;height:4.3cqw;translate:-50% 0;
+  /* the card and its type scale with the painting, so the names always fit */
+  padding:.4cqw 1cqw;column-gap:.9cqw;
 }
+.cabinet .tag-no{min-width:1.9cqw;padding-right:.9cqw;font-size:clamp(.7rem,2.1cqw,1.5rem)}
+.cabinet .tag-no small{font-size:clamp(.42rem,.8cqw,.58rem);margin-bottom:.1cqw}
+.cabinet .tag-name{font-size:clamp(.62rem,1.42cqw,1.02rem)}
+.cabinet .tag-src{margin-top:.12cqw;font-size:clamp(.52rem,1.13cqw,.82rem)}
+.cabinet .tag-stamp{font-size:clamp(.5rem,.92cqw,.66rem);padding:.08cqw .55cqw;top:-.8cqw;right:-.8cqw}
 
 /* ── Planks (phones) ──
    The plank painting is 1481×321: its top surface runs from 1.6% to 58.5%
@@ -248,6 +269,9 @@ body.on-recipes .hf-toggle{display:none}
 
 /* Phones: two cakes per plank, and a simpler heading */
 @media (max-width:640px){
+  /* phones stack the planks and scroll, so the shelf is an ordinary block again */
+  .shelf-wrap{display:block}
+  .shelf{display:block;flex:none;height:auto;min-height:0}
   .shelf-head{grid-template-columns:1fr;gap:.8rem}
   .slice-tag{grid-template-columns:1fr;row-gap:.2rem;padding:.5rem .55rem;text-align:center}
   .tag-no{border:0;padding:0;flex-direction:row;gap:.25rem;align-items:baseline;font-size:1.1rem}

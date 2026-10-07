@@ -46,12 +46,12 @@ function stampFor(id){
 // tx is the plate's centre within the box; ty the label's top within the box
 // (on the shelf lip for the upper floor, on the plinth for the lower).
 const SCENE = {
-  orange:       { x:10.742, y:21.484, w:19.531, h:14.323, tx: 9.635, ty:14.714 },
-  marble:       { x:39.388, y:21.484, w:19.857, h:14.323, tx: 9.896, ty:14.714 },
-  classic:      { x:69.01,  y:21.484, w:20.182, h:14.323, tx: 9.896, ty:14.714 },
-  rum:          { x:10.417, y:44.922, w:20.182, h:14.974, tx:10.067, ty:15.234 },
-  blueberry:    { x:39.388, y:44.922, w:20.182, h:14.974, tx: 9.993, ty:15.234 },
-  chocZucchini: { x:68.685, y:44.922, w:20.182, h:14.974, tx: 9.863, ty:15.234 },
+  orange:       { x:14.118, y:25.372, w:17.857, h:13.096, tx:8.809, ty:13.453 },
+  marble:       { x:40.309, y:25.372, w:18.155, h:13.096, tx:9.048, ty:13.453 },
+  classic:      { x:67.393, y:25.372, w:18.452, h:13.096, tx:9.048, ty:13.453 },
+  rum:          { x:13.821, y:46.801, w:18.452, h:13.691, tx:9.204, ty:13.928 },
+  blueberry:    { x:40.309, y:46.801, w:18.452, h:13.691, tx:9.137, ty:13.928 },
+  chocZucchini: { x:67.096, y:46.801, w:18.452, h:13.691, tx:9.018, ty:13.928 },
 };
 
 // A pencil-drawn arrow for the chapter links.
@@ -115,10 +115,14 @@ function buildShelf(){
     const all = entries.map(([id, r], i) => plankCakeHTML(id, r, i));
     for(let k = 0; k < all.length; k += 2) rows += shelfRow(all.slice(k, k + 2).join(''));
   } else {
+    // cab-fit sizes the painting to the space left on screen; .cabinet is the
+    // measuring box the cakes are placed in (its width drives their cqw units).
     rows = `
-      <div class="cabinet">
-        <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
-        ${entries.map(([id, r], i) => sceneCakeHTML(id, r, i)).join('')}
+      <div class="cab-fit">
+        <div class="cabinet">
+          <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
+          ${entries.map(([id, r], i) => sceneCakeHTML(id, r, i)).join('')}
+        </div>
       </div>`;
   }
   panel.innerHTML = `
