@@ -1,9 +1,9 @@
 // ── RECIPES IN THE BOOK ─────────────────────────────────────
 // The Recipes chapter as pages of the History book (history-book.js).
-// First a fold-out plate across the open spread: an oak pâtisserie cabinet
-// whose centre post runs down the book's spine, three cakes on each page,
-// each beside a small standing card. Then one spread per recipe: the cake
-// and the baker's note on the left page, ingredients and method on the right.
+// First a fold-out plate printed across the open spread, as in a lay-flat
+// book: the oak pâtisserie cabinet with its six cakes, three to a shelf, and
+// only a faint crease at the fold. Then one spread per recipe: the cake and
+// the baker's note on the left page, ingredients and method on the right.
 //
 // history-book.js puts recipePages() into the book, then calls attach() with
 // the book. Choosing a cake riffles through the pages to its recipe; "Back to
@@ -14,6 +14,7 @@
 Object.assign(T.en, {
   'book.recipes.kicker': 'Chapter II',
   'book.recipes.hint': 'Choose a cake to open its recipe.',
+  'book.recipes.count': '{n} cakes on the shelf',
   'book.back': '← Back to the shelf',
   'book.ingredients': 'Ingredients',
   'book.method': 'Method',
@@ -26,6 +27,7 @@ Object.assign(T.en, {
 Object.assign(T.zh, {
   'book.recipes.kicker': '第二章',
   'book.recipes.hint': '选一块蛋糕，翻到它的食谱。',
+  'book.recipes.count': '架上 {n} 款蛋糕',
   'book.back': '← 回到橱架',
   'book.ingredients': '食材',
   'book.method': '做法',
@@ -41,25 +43,24 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
 const LIFT_MS = 380;   // the cake rises off the shelf before the pages turn
 
 // ── The fold-out ──
-// The painting (images/book/shelf.webp) is 1512×908 px. On the spread it is
-// 180cqw wide (a page is 100cqw), 10cqw in from the book's outer edges and
-// 18cqw below the top of the page, so its centre post lies on the spine.
-// Everything below is in painting pixels and converted to page cqw.
-const SHELF = { w:1512, width:180, left:10, top:18 };
-const K = SHELF.width / SHELF.w;
-const PLATE = { width:245, x:[300, 1212], bottom:[310, 568, 826] };   // per half / per row
-const CARD = { width:212, height:100, x:[566, 946] };                 // the standing card beside each plate
-const BAY = { x:[[60, 734], [778, 1452]], y:[[76, 316], [334, 574], [592, 832]] };
-// Each cut-out cake (images/shelf/scene/*.webp): its size, and its plate's centre, lowest point and width
-const SPRITE = {
-  orange:       { w:300, h:220, cx:146.5, b:203, pw:271 },
-  marble:       { w:305, h:220, cx:153.6, b:203, pw:271 },
-  classic:      { w:310, h:220, cx:154.0, b:204, pw:276 },
-  rum:          { w:310, h:230, cx:155.5, b:210, pw:273 },
-  blueberry:    { w:310, h:230, cx:154.5, b:211, pw:275 },
-  chocZucchini: { w:310, h:230, cx:153.0, b:212, pw:276 },
+// The painting (images/shelf/scene/cabinet.webp, 1536×1024, the same one the
+// Recipes page uses outside the book) is laid across both pages: the same
+// .rb-spread layer sits on each page, shifted by a page width, and each page
+// shows its own half. Inside the layer, 1cqw is 1% of the painting's width.
+// recipe-book.css sizes and places the layer (174cqw wide, 13cqw in from each
+// outer edge).
+// Each cake has a cut-out of the painting and a patch of bare shelf to put
+// behind it, so it can be lifted off the shelf: x, y, w, h of the cut-out;
+// tx is the plate's centre within the box; ty the label's top within the box.
+const SCENE = {
+  orange:       { x:14.118, y:25.372, w:17.857, h:13.096, tx:8.809, ty:13.453 },
+  marble:       { x:40.309, y:25.372, w:18.155, h:13.096, tx:9.048, ty:13.453 },
+  classic:      { x:67.393, y:25.372, w:18.452, h:13.096, tx:9.048, ty:13.453 },
+  rum:          { x:13.821, y:46.801, w:18.452, h:13.691, tx:9.204, ty:13.928 },
+  blueberry:    { x:40.309, y:46.801, w:18.452, h:13.691, tx:9.137, ty:13.928 },
+  chocZucchini: { x:67.096, y:46.801, w:18.452, h:13.691, tx:9.018, ty:13.928 },
 };
-const cq = v => `${(v * K).toFixed(3)}cqw`;
+const LAYER = { width:174, left:13 };   // in page cqw, as in recipe-book.css
 
 // ── Text ──
 const isZh = () => currentLang === 'zh';
@@ -75,25 +76,40 @@ function stampLine(id){
 
 // ── Pages ──
 
-function cakeHTML(id, i){
-  const side = i < 3 ? 0 : 1, row = i % 3;     // left page holds cakes 1–3, right page 4–6
-  const [bx0, bx1] = BAY.x[side], [by0, by1] = BAY.y[row];
-  const sp = SPRITE[id], s = PLATE.width / sp.pw;
-  const imgX = PLATE.x[side] - sp.cx * s, imgY = PLATE.bottom[row] - sp.b * s;
-  const cardX = CARD.x[side] - CARD.width / 2, cardY = PLATE.bottom[row] - 8 - CARD.height;
-  const pageLeft = SHELF.left / K - side * 100 / K;   // where the page's left edge is, in painting px
+// A cake on one page's half of the spread. The middle column lies across the
+// fold, so it is drawn on both pages; the right-hand copy is a twin, left out
+// of the tab order, that lights and lifts with the original.
+function cakeHTML(id, twin){
+  const b = SCENE[id];
   return `
-    <button class="rb-cake" type="button" data-recipe="${id}"
-            style="left:${cq(pageLeft + bx0)};top:calc(${SHELF.top}cqw + ${cq(by0)});width:${cq(bx1 - bx0)};height:${cq(by1 - by0)}">
-      <span class="rb-cake-shadow" style="left:${cq(PLATE.x[side] - bx0 - PLATE.width * .46)};top:${cq(PLATE.bottom[row] - by0 - PLATE.width * .13)};width:${cq(PLATE.width * .92)};height:${cq(PLATE.width * .16)}"></span>
-      <img class="rb-cake-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false"
-           style="left:${cq(imgX - bx0)};top:${cq(imgY - by0)};width:${cq(sp.w * s)};height:${cq(sp.h * s)}">
-      <span class="rb-card" style="left:${cq(cardX - bx0)};top:${cq(cardY - by0)};width:${cq(CARD.width)};height:${cq(CARD.height)}">
-        <span class="rb-card-no"></span>
-        <span class="rb-card-name"></span>
-        <span class="rb-card-stamp"></span>
+    <button class="rb-cake" type="button" data-recipe="${id}"${twin ? ' data-twin tabindex="-1" aria-hidden="true"' : ''}
+            style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw;--tx:${b.tx}cqw;--ty:${b.ty}cqw">
+      <img class="rb-cake-bare" src="./images/shelf/scene/${id}-bare.webp" alt="" draggable="false">
+      <img class="rb-cake-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false">
+      <span class="rb-tag">
+        <span class="rb-tag-no"><small>No.</small><span class="rb-tag-n"></span></span>
+        <span class="rb-tag-text"><span class="rb-tag-name"></span><span class="rb-tag-src"></span></span>
+        <span class="rb-tag-stamp"></span>
       </span>
     </button>`;
+}
+
+// The cakes whose box reaches onto a page (side 0 left, 1 right).
+function spreadHTML(side){
+  const pageStart = side * 100, pageEnd = pageStart + 100;
+  const toSpread = v => LAYER.left + v * LAYER.width / 100;
+  const cakes = IDS.filter(id => {
+    const b = SCENE[id];
+    return toSpread(b.x) < pageEnd && toSpread(b.x + b.w) > pageStart;
+  }).map(id => {
+    const onBoth = toSpread(SCENE[id].x) < 100 && toSpread(SCENE[id].x + SCENE[id].w) > 100;
+    return cakeHTML(id, side === 1 && onBoth);
+  });
+  return `
+    <div class="rb-spread">
+      <img class="rb-shelf-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" draggable="false">
+      ${cakes.join('')}
+    </div>`;
 }
 
 function page(cls, html, n){
@@ -105,21 +121,19 @@ function page(cls, html, n){
 
 // The chapter's pages, numbered on from `firstNumber` (the folio on the first page).
 export function recipePages(firstNumber){
-  const shelfImg = `<img class="rb-shelf-img" src="./images/book/shelf.webp" alt="" width="1512" height="908" draggable="false">`;
   const left = page('hb-left rb-opener', `
-    ${shelfImg}
+    ${spreadHTML(0)}
     <header class="rb-head">
       <p class="rb-kicker" data-i18n="book.recipes.kicker">${t('book.recipes.kicker')}</p>
       <h2 class="rb-title" data-i18n="recipes.title">${t('recipes.title')}</h2>
-    </header>
-    ${IDS.slice(0, 3).map((id, i) => cakeHTML(id, i)).join('')}`, firstNumber);
+    </header>`, firstNumber);
   const right = page('hb-right rb-opener', `
-    ${shelfImg}
+    ${spreadHTML(1)}
     <header class="rb-head">
+      <p class="rb-count"></p>
       <p class="rb-dek" data-i18n="recipes.subtitle">${t('recipes.subtitle')}</p>
       <p class="rb-hint" data-i18n="book.recipes.hint">${t('book.recipes.hint')}</p>
-    </header>
-    ${IDS.slice(3).map((id, i) => cakeHTML(id, i + 3)).join('')}`, firstNumber + 1);
+    </header>`, firstNumber + 1);
   const pages = [left, right];
 
   IDS.forEach((id, i) => {
@@ -160,10 +174,13 @@ function fill(pg){
   pg.querySelectorAll('.rb-cake').forEach(btn => {
     const id = btn.dataset.recipe;
     btn.setAttribute('aria-label', nameOf(id));
-    btn.querySelector('.rb-card-no').textContent = numberOf(id);
-    btn.querySelector('.rb-card-name').innerHTML = nameOf(id);
-    btn.querySelector('.rb-card-stamp').textContent = stampLine(id);
+    btn.querySelector('.rb-tag-n').textContent = IDS.indexOf(id) + 1;
+    btn.querySelector('.rb-tag-name').innerHTML = nameOf(id);
+    btn.querySelector('.rb-tag-src').textContent = sourceOf(id);
+    tagStamp(btn, id);
   });
+  const count = pg.querySelector('.rb-count');
+  if(count) count.textContent = t('book.recipes.count').replace('{n}', IDS.length);
   const intro = pg.querySelector('.rb-in');
   if(intro){
     const id = intro.dataset.recipe, r = RJ[id];
@@ -187,6 +204,12 @@ function fill(pg){
       ? `<ol>${method.map(step => `<li>${step}</li>`).join('')}</ol>`
       : `<p>${method || ''}</p>`;
   }
+}
+
+function tagStamp(btn, id){
+  const el = btn.querySelector('.rb-tag-stamp'), s = getStampState(id);
+  el.textContent = stampLine(id);
+  el.className = 'rb-tag-stamp' + (s.made ? ' made' : s.wish ? ' wish' : '');
 }
 
 function renderStampButtons(scope, id){
@@ -253,15 +276,15 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
     done?.();
   });
 
-  const cakeButton = id => root.querySelector(`.rb-cake[data-recipe="${id}"]`);
+  const cakeButtons = id => root.querySelectorAll(`.rb-cake[data-recipe="${id}"]`);
 
   let picking = false;   // a cake is lifted and its recipe is about to open
   function pick(id){
     if(riffle || picking || !ready() || where() !== 'shelf') return;
-    const btn = cakeButton(id);
-    btn?.classList.add('lifted');
+    const btns = cakeButtons(id);
+    btns.forEach(b => b.classList.add('lifted'));
     picking = true;
-    setTimeout(() => riffleTo(pageOf(id), () => { picking = false; btn?.classList.remove('lifted', 'pointed'); }),
+    setTimeout(() => riffleTo(pageOf(id), () => { picking = false; btns.forEach(b => b.classList.remove('lifted', 'pointed', 'hover')); }),
       reducedMotion() ? 0 : LIFT_MS);
   }
   function back(){
@@ -274,8 +297,7 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
 
   function refreshStamps(id){
     root.querySelectorAll(`.rb-in[data-recipe="${id}"]`).forEach(el => renderStampButtons(el, id));
-    const card = cakeButton(id)?.querySelector('.rb-card-stamp');
-    if(card) card.textContent = stampLine(id);
+    cakeButtons(id).forEach(b => tagStamp(b, id));
   }
   function mark(kind, id = where()){
     if(!id || id === 'shelf') return false;
@@ -293,6 +315,16 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
     if(e.target.closest('.rb-next')) onNextChapter?.();
   });
 
+  // A cake drawn across the fold is two buttons: hovering or focusing either lights both.
+  const light = (e, on) => {
+    const cake = e.target.closest?.('.rb-cake');
+    if(cake && !(e.relatedTarget && cake.contains(e.relatedTarget))) cakeButtons(cake.dataset.recipe).forEach(b => b.classList.toggle('hover', on));
+  };
+  root.addEventListener('mouseover', e => light(e, true));
+  root.addEventListener('mouseout', e => light(e, false));
+  root.addEventListener('focusin', e => light(e, true));
+  root.addEventListener('focusout', e => light(e, false));
+
   // A long recipe scrolls inside its page; the fade at the foot lifts at the end.
   root.querySelectorAll('.rb-scroll, .rb-note-wrap').forEach(el => {
     const update = () => el.classList.toggle('at-end', el.scrollTop + el.clientHeight >= el.scrollHeight - 4);
@@ -307,7 +339,7 @@ export function attach(pageFlip, { start, root, isOpen, onNextChapter }){
 
   return {
     start, pageOf, where, pick, back, point, mark, scrollBy, riffleTo,
-    cakes: () => where() === 'shelf' ? [...root.querySelectorAll('.rb-cake')] : [],
+    cakes: () => where() === 'shelf' ? [...root.querySelectorAll('.rb-cake:not([data-twin])')] : [],
     get busy(){ return !!riffle || picking; },
     refresh(){ root.querySelectorAll('.hb-page').forEach(fill); },
   };
