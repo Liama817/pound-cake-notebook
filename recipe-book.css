@@ -1,0 +1,209 @@
+/* ── RECIPES IN THE BOOK ─────────────────────────────────
+   Styles for recipe-book.js: the fold-out shelf across the Recipes chapter's
+   first spread, the standing cards beside the cakes, and the recipe spreads.
+   Sizes are in cqw: each .hb-page is a container, 100cqw wide. */
+
+.rb-opener,.rb-recipe{
+  --rb-ink:#2C2416;
+  --rb-soft:#5C4A32;
+  --rb-ochre:#9A5B22;
+  --rb-rule:rgba(94,78,59,.26);
+}
+
+/* ── The fold-out shelf ── */
+.rb-shelf-img{
+  position:absolute;top:18cqw;width:180cqw;height:auto;max-width:none;
+  pointer-events:none;user-select:none;-webkit-user-drag:none;
+}
+.rb-opener.hb-left .rb-shelf-img{left:10cqw}
+.rb-opener.hb-right .rb-shelf-img{left:-90cqw}
+/* the paper curving into the spine, over the painting as well */
+.rb-opener::after{
+  content:'';position:absolute;inset:0;z-index:3;pointer-events:none;
+}
+.rb-opener.hb-left::after{box-shadow:inset -26px 0 30px -22px rgba(70,45,15,.42)}
+.rb-opener.hb-right::after{box-shadow:inset 26px 0 30px -22px rgba(70,45,15,.42)}
+
+.rb-head{position:absolute;top:6.5cqw;margin:0}
+.rb-opener.hb-left .rb-head{left:10cqw}
+.rb-opener.hb-right .rb-head{right:10cqw;text-align:right}
+.rb-kicker{
+  margin:0 0 .6cqw;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.2cqw;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--rb-ochre);
+}
+.rb-title{
+  margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:400;
+  font-size:7.6cqw;line-height:.9;color:var(--rb-ink);
+}
+.rb-dek{
+  margin:1.2cqw 0 .6cqw;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:2.9cqw;line-height:1.35;color:var(--rb-ink);
+}
+.rb-hint{margin:0;font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.3cqw;color:var(--rb-soft)}
+
+/* ── One cake in its bay: a button (the bay) holding the cut-out and its card ── */
+.rb-cake{
+  position:absolute;z-index:1;
+  border:0;padding:0;margin:0;background:none;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+/* clicks must land on the button itself, or the book takes them as a page turn */
+.rb-cake *{pointer-events:none}
+.rb-cake:focus-visible{outline:none}
+.rb-cake:focus-visible .rb-card{outline:2px solid var(--rb-ochre);outline-offset:2px}
+.rb-cake-img{
+  position:absolute;max-width:none;
+  user-select:none;-webkit-user-drag:none;
+  transition:transform .5s cubic-bezier(.3,.7,.2,1);
+}
+/* where the plate meets the oak; it stays on the shelf when the plate is lifted */
+.rb-cake-shadow{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(80,52,22,.42) 30%, rgba(80,52,22,0) 70%);
+  mix-blend-mode:multiply;
+  transition:opacity .5s ease, transform .5s ease;
+}
+/* The standing card: a folded card set on the shelf, front face to the viewer */
+.rb-card{
+  position:absolute;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35cqw;
+  padding:.8cqw 1.2cqw;text-align:center;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .32 0 0 0 0 .22 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg,#FFFDF7,#F7F0E1);
+  border:1px solid rgba(94,78,59,.24);border-radius:1px;
+  box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 2px 3px -1px rgba(60,40,15,.35);
+  transition:transform .4s ease;
+}
+/* its shadow on the shelf */
+.rb-card::after{
+  content:'';position:absolute;left:4%;right:-6%;bottom:-.9cqw;height:1.4cqw;
+  background:radial-gradient(ellipse at 40% 30%, rgba(70,45,18,.32), rgba(70,45,18,0) 70%);
+  z-index:-1;
+}
+.rb-card-no{
+  font-family:var(--font-body);font-size:clamp(7px,1.55cqw,11px);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--rb-ochre);
+}
+.rb-card-name{
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:clamp(9px,2.35cqw,16px);line-height:1.1;
+  color:var(--rb-ink);text-wrap:balance;
+}
+.rb-card-stamp{
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:clamp(7px,1.5cqw,10.5px);color:#4d6e36;
+}
+.rb-card-stamp:empty{display:none}
+
+/* Hover, focus or a pointing hand: the plate is picked up a little; chosen: lifted */
+.rb-cake:is(:hover, :focus-visible, .pointed) .rb-cake-img{transform:translateY(-5%)}
+.rb-cake:is(:hover, :focus-visible, .pointed) .rb-cake-shadow{opacity:.6;transform:scale(.94)}
+.rb-cake:is(:hover, :focus-visible, .pointed) .rb-card{transform:translateY(-1.5%)}
+.rb-cake.lifted .rb-cake-img{transform:translateY(-16%) scale(1.05)}
+.rb-cake.lifted .rb-cake-shadow{opacity:.35;transform:scale(.85)}
+
+/* ── A recipe spread ── */
+.rb-recipe button{font:inherit;cursor:pointer}
+.rb-label{
+  margin:0 0 1.2cqw;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.1cqw;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--rb-ochre);
+}
+
+/* Left page: the cake, its name, and the baker's note */
+.rb-in{
+  position:absolute;inset:6cqw 12cqw 10cqw 9cqw;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+}
+.rb-back{
+  align-self:flex-start;border:0;background:none;padding:.4cqw 0;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.3cqw;letter-spacing:.04em;color:var(--rb-soft);
+}
+.rb-back:hover{color:var(--rb-ochre)}
+.rb-plate{position:relative;width:54cqw;margin:1cqw 0 0}
+.rb-plate img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.rb-plate::before{   /* the plate's shadow on the page */
+  content:'';position:absolute;left:8%;right:8%;bottom:1%;height:12%;
+  background:radial-gradient(ellipse at center, rgba(80,52,22,.28), rgba(80,52,22,0) 70%);
+}
+.rb-no{
+  margin:1.2cqw 0 .4cqw;font-family:var(--font-body);font-size:2cqw;letter-spacing:.22em;text-transform:uppercase;color:var(--rb-ochre);
+}
+.rb-name{
+  margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:400;font-size:6cqw;line-height:1.02;color:var(--rb-ink);
+  text-wrap:balance;
+}
+.rb-src{margin:.8cqw 0 0;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:2.6cqw;color:var(--rb-soft)}
+.rb-tags{margin:.7cqw 0 0;font-family:var(--font-body),'Noto Serif SC',serif;font-size:2cqw;letter-spacing:.14em;text-transform:uppercase;color:#7A6448}
+.rb-stamps{display:flex;gap:1.6cqw;margin:2cqw 0 0}
+.rb-stamp{
+  border:1px solid var(--rb-rule);border-radius:999px;background:none;
+  padding:.6cqw 1.8cqw;font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.15cqw;color:var(--rb-soft);
+}
+.rb-stamp:hover{border-color:var(--rb-ochre);color:var(--rb-ink)}
+.rb-stamp.made[aria-pressed="true"]{color:#3f6a2c;border-color:#6f9a5a;background:rgba(111,154,90,.1)}
+.rb-stamp.wish[aria-pressed="true"]{color:#a0402e;border-color:#c97a66;background:rgba(201,122,102,.1)}
+.rb-note-wrap{
+  flex:1;min-height:0;overflow:auto;width:100%;margin-top:2.4cqw;padding-top:2cqw;
+  border-top:1px solid var(--rb-rule);text-align:left;
+  scrollbar-width:thin;scrollbar-color:rgba(176,122,58,.45) transparent;
+}
+.rb-note{
+  margin:0;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:2.55cqw;line-height:1.6;color:#4A3A26;
+}
+.rb-note b{font-weight:600;color:var(--rb-ink)}
+
+/* Right page: ingredients and method, scrolling when the recipe is long */
+.rb-scroll{
+  position:absolute;inset:7cqw 9cqw 10cqw 12cqw;overflow:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(176,122,58,.45) transparent;
+}
+.rb-scroll,.rb-note-wrap{
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 7cqw),transparent);
+          mask-image:linear-gradient(180deg,#000 calc(100% - 7cqw),transparent);
+}
+.rb-scroll.at-end,.rb-note-wrap.at-end{-webkit-mask-image:none;mask-image:none}
+.rb-ing{
+  list-style:none;margin:0 0 3.4cqw;padding:0;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:2.45cqw;line-height:1.5;color:var(--rb-ink);
+}
+.rb-ing li{padding:.25cqw 0;border-bottom:1px dotted rgba(94,78,59,.2)}
+.rb-ing li.note{border:0;font-style:italic;color:#7A6448;font-size:2.25cqw}
+.rb-method ol{margin:0;padding:0;list-style:none;counter-reset:step}
+.rb-method li{
+  counter-increment:step;position:relative;padding:0 0 2.2cqw 5cqw;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-size:2.4cqw;line-height:1.6;color:#4A3A26;
+}
+.rb-method li::before{
+  content:counter(step);position:absolute;left:0;top:-.2cqw;
+  font-family:var(--font-serif);font-size:3.4cqw;line-height:1;color:var(--rb-ochre);
+}
+.rb-method li b{display:block;margin-bottom:.3cqw;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:600;font-size:2.8cqw;color:var(--rb-ink)}
+.rb-method p{margin:0;font-family:var(--font-lora),'Noto Serif SC',serif;font-size:2.4cqw;line-height:1.6;color:#4A3A26}
+.rb-next{
+  display:block;margin:2cqw 0 1cqw auto;border:0;background:none;padding:0;
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-style:italic;font-size:3.2cqw;color:var(--rb-ink);
+}
+.rb-next:hover{color:var(--rb-ochre)}
+.rb-recipe :focus-visible{outline:2px solid var(--rb-ochre);outline-offset:2px}
+
+/* Narrow screens show one small page at a time: keep the words readable,
+   and let the longer text scroll inside its page. */
+@media (max-width:700px){
+  .rb-back,.rb-src,.rb-stamp{font-size:max(2.3cqw,12px)}
+  .rb-label,.rb-no,.rb-tags,.rb-kicker{font-size:max(2.1cqw,10px)}
+  .rb-name{font-size:max(6cqw,21px)}
+  .rb-note,.rb-method li,.rb-method p{font-size:max(2.5cqw,12.5px)}
+  .rb-method li b{font-size:max(2.8cqw,13.5px)}
+  .rb-ing{font-size:max(2.45cqw,12px)}
+  .rb-ing li.note{font-size:max(2.25cqw,11px)}
+  .rb-method li{padding-left:max(5cqw,20px)}
+  .rb-dek{font-size:max(2.9cqw,12px)}
+  .rb-hint{font-size:max(2.3cqw,10.5px)}
+  .rb-card-name{font-size:max(2.35cqw,10px)}
+  .rb-card-no{font-size:max(1.55cqw,7.5px)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .rb-cake-img,.rb-cake-shadow,.rb-card{transition:none}
+}
