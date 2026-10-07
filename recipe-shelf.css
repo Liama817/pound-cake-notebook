@@ -1,0 +1,182 @@
+/* ── RECIPE SHELF ───────────────────────────────────────
+   A bakery display case for recipe-shelf.js: walnut frame, warm-lit back
+   wall, wooden shelves, glass with soft reflections, and a paper tag in
+   front of each cake. */
+
+.shelf-wrap{
+  --row-h: clamp(190px, 29vh, 260px);   /* one shelf: cake space + plank + label */
+  --plank: 16px;
+  --label: 50px;                         /* room under the plank for the hanging label */
+  width:100%;box-sizing:border-box;      /* the panel is a flex column; don't shrink to content */
+  max-width:1040px;margin:0 auto;
+  padding:clamp(1.2rem,3vh,2.2rem) clamp(1rem,4vw,2.5rem) 2rem;
+  display:flex;flex-direction:column;align-items:center;
+}
+
+.shelf-head{text-align:center;margin-bottom:clamp(.8rem,2.4vh,1.5rem)}
+.shelf-title{
+  font-family:var(--font-serif);font-weight:400;
+  font-size:clamp(2rem,4vw,2.8rem);color:#F5ECD7;margin:0;
+}
+.shelf-sub{
+  font-family:var(--font-lora);font-style:italic;font-size:.9rem;
+  color:rgba(210,185,145,.75);margin:.3rem 0 0;
+}
+
+/* ── The case ── */
+.case{width:100%;position:relative}
+
+/* Wooden sign across the top of the case */
+.case-sign{
+  position:relative;z-index:2;
+  margin:0 auto -6px;width:max-content;
+  padding:.5rem 1.6rem .55rem;
+  background:linear-gradient(#5a3a1e,#43290f);
+  border:1px solid rgba(226,184,74,.45);
+  box-shadow:0 6px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,220,160,.18);
+  font-family:var(--font-serif);font-style:italic;font-size:1.05rem;letter-spacing:.06em;
+  color:#E8C98A;
+}
+
+/* Walnut frame around a warm, lit back wall */
+.case-body{
+  position:relative;overflow:hidden;
+  border:14px solid #3b2410;
+  border-image:linear-gradient(160deg,#5c3a1c,#2e1b0b 55%,#4a2e15) 1;
+  box-shadow:0 30px 60px rgba(0,0,0,.55), inset 0 0 40px rgba(0,0,0,.35);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(255,214,150,.55), transparent 70%),   /* lamp light */
+    repeating-linear-gradient(90deg, rgba(120,80,40,.06) 0 2px, transparent 2px 64px),   /* panelled wall */
+    linear-gradient(#d9bf98, #b8946a);
+  padding:10px 10px 0;
+}
+.case-base{
+  height:30px;
+  background:linear-gradient(#3b2410,#24150a);
+  box-shadow:0 18px 30px rgba(0,0,0,.5);
+}
+
+.case-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+}
+
+/* Glass front: faint tint plus two diagonal reflections */
+.case-glass{
+  position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:
+    linear-gradient(115deg, transparent 18%, rgba(255,255,255,.16) 22%, transparent 30%),
+    linear-gradient(115deg, transparent 62%, rgba(255,255,255,.08) 64%, transparent 69%),
+    linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,0));
+}
+
+/* ── One cake on its stretch of shelf ── */
+.slice{
+  position:relative;height:var(--row-h);
+  border:0;padding:0;margin:0;background:none;cursor:pointer;
+  font:inherit;color:inherit;
+}
+.slice:focus-visible{outline:none}
+.slice:focus-visible .slice-tag{outline:2px solid #E2B84A;outline-offset:3px}
+
+/* The plank: cells sit edge to edge, so their planks join into one shelf */
+.slice::after{
+  content:'';position:absolute;left:-10px;right:-10px;bottom:var(--label);height:var(--plank);
+  background:linear-gradient(#8a5a2e 0, #6b4220 35%, #4b2d14 100%);
+  box-shadow:0 10px 16px -4px rgba(40,20,5,.55), inset 0 1px 0 rgba(255,210,150,.35);
+}
+
+.slice-img{
+  position:absolute;left:50%;bottom:calc(var(--label) + var(--plank) - 4px);
+  width:auto;max-width:80%;max-height:calc(var(--row-h) - var(--label) - var(--plank) - 20px);
+  transform:translateX(-46%);
+  filter:drop-shadow(0 6px 8px rgba(60,35,10,.35));
+  transition:transform .45s cubic-bezier(.3,.7,.2,1), filter .45s ease;
+  user-select:none;-webkit-user-drag:none;
+}
+/* Contact shadow on the plank, shrinks as the cake rises */
+.slice-shadow{
+  position:absolute;left:50%;bottom:calc(var(--label) + var(--plank) - 7px);
+  width:60%;height:14px;transform:translateX(-46%);
+  background:radial-gradient(ellipse at center, rgba(50,28,8,.45), transparent 70%);
+  transition:transform .45s ease, opacity .45s ease;
+}
+/* Warm glow behind the cake when it's chosen or hovered */
+.slice-glow{
+  position:absolute;left:50%;bottom:calc(var(--label) + 10%);width:74%;height:60%;
+  transform:translateX(-46%);border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(255,232,180,.75), transparent 70%);
+  opacity:0;transition:opacity .4s ease;
+}
+
+/* Paper label clipped to the front edge of the shelf, under its cake */
+.slice-tag{
+  position:absolute;left:50%;top:calc(100% - var(--label) - 3px);z-index:2;
+  max-width:86%;
+  display:flex;flex-direction:column;align-items:center;gap:.05rem;
+  padding:.3rem .7rem .34rem;
+  background:#FBF6EC;
+  box-shadow:0 3px 5px rgba(40,20,5,.35), 0 0 0 1px rgba(120,90,50,.15);
+  transform:translateX(-50%) rotate(-1.5deg);transform-origin:top center;
+  text-align:center;white-space:nowrap;
+  transition:transform .35s ease;
+}
+/* a little brass clip holding the label to the shelf */
+.slice-tag::before{
+  content:'';position:absolute;top:-5px;left:50%;width:18px;height:8px;margin-left:-9px;
+  background:linear-gradient(#e2c27a,#a8843c);border-radius:2px;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+.slice:nth-child(even) .slice-tag{transform:translateX(-50%) rotate(1.5deg)}
+.tag-name{
+  font-family:var(--font-serif);font-size:clamp(.8rem,1.2vw,.98rem);line-height:1.15;color:#2C2416;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;
+}
+.tag-src{
+  font-family:var(--font-body);font-style:italic;font-size:clamp(.6rem,.9vw,.68rem);color:#8a6f4c;
+}
+.tag-stamp{
+  position:absolute;right:-.6rem;top:-.75rem;background:#FBF6EC;
+  width:max-content;
+  font-family:var(--font-body);font-size:.58rem;letter-spacing:.06em;
+  padding:.05rem .35rem;border:1px solid currentColor;transform:rotate(-2deg);
+}
+.tag-stamp.made{color:#5a7a42}
+.tag-stamp.wish{color:#b0573f}
+
+/* Hover / keyboard focus: the cake lifts a little */
+.slice:hover .slice-img,
+.slice:focus-visible .slice-img,
+.slice.pointed .slice-img{transform:translateX(-46%) translateY(-7px) scale(1.03)}
+.slice:hover .slice-glow,
+.slice:focus-visible .slice-glow,
+.slice.pointed .slice-glow{opacity:.55}
+.slice:hover .slice-shadow,
+.slice.pointed .slice-shadow{transform:translateX(-46%) scale(.9);opacity:.8}
+
+/* Chosen: it rises off the shelf before the recipe card opens */
+.slice.lifted .slice-img{
+  transform:translateX(-46%) translateY(-30px) scale(1.09);
+  filter:drop-shadow(0 22px 18px rgba(50,28,8,.38));
+}
+.slice.lifted .slice-glow{opacity:1}
+.slice.lifted .slice-shadow{transform:translateX(-46%) scale(.65);opacity:.45}
+.slice.lifted .slice-tag{transform:translateX(-50%) rotate(-4deg)}
+
+.shelf-hint{
+  margin:1.1rem 0 0;
+  font-family:var(--font-body);font-style:italic;font-size:.74rem;letter-spacing:.06em;
+  color:rgba(200,169,126,.6);
+}
+
+/* Phones: two cakes per shelf */
+@media (max-width:640px){
+  .shelf-wrap{--row-h:clamp(170px,23vh,200px);--plank:12px;--label:52px}
+  .case-grid{grid-template-columns:repeat(2,1fr)}
+  .case-body{border-width:10px}
+  .slice-tag{white-space:normal;max-width:90%;padding:.25rem .5rem .3rem}
+  .tag-src{display:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .slice-img,.slice-shadow,.slice-glow,.slice-tag{transition:none}
+}
