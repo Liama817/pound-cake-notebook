@@ -1,0 +1,59 @@
+/* ── HAND PAGE-TURN ─────────────────────────────────────
+   Styles for hand-flip.js: the toggle button, the camera
+   preview, and the shading drawn on a page while it turns. */
+
+/* Toggle button — sits above the cover (z 500) and the book header (z 100) */
+.hf-toggle{
+  position:fixed;right:1.4rem;bottom:1.4rem;z-index:600;
+  font-family:var(--font-body);font-size:.66rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(240,225,195,.85);
+  background:rgba(28,18,8,.72);
+  border:1px solid rgba(210,185,145,.45);
+  padding:.65rem 1.1rem;cursor:pointer;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:color .2s ease,border-color .2s ease,background .2s ease;
+}
+.hf-toggle:hover{color:#F5E6C8;border-color:rgba(226,184,74,.8)}
+.hf-toggle[aria-pressed="true"]{color:#E2B84A;border-color:rgba(226,184,74,.8)}
+.hf-toggle:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
+
+/* Camera preview card */
+.hf-panel{
+  position:fixed;right:1.4rem;bottom:4.4rem;z-index:600;
+  width:200px;
+  background:rgba(20,12,5,.88);
+  border:1px solid rgba(210,185,145,.3);
+  box-shadow:0 12px 40px rgba(0,0,0,.55);
+  padding:.5rem;
+  display:none;
+}
+.hf-panel.open{display:block}
+.hf-stage{position:relative;width:100%;aspect-ratio:4/3;background:#0d0804;overflow:hidden}
+/* Mirror video + overlay together so it behaves like a mirror */
+.hf-stage video,.hf-stage canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;transform:scaleX(-1);
+}
+.hf-stage video{filter:sepia(.25) saturate(.8) brightness(.9)}
+.hf-status{
+  font-family:var(--font-body);font-style:italic;
+  font-size:.78rem;line-height:1.35;
+  color:rgba(240,225,195,.85);
+  margin:.5rem .15rem .1rem;min-height:2.1em;
+}
+.hf-privacy{
+  font-family:var(--font-body);font-size:.6rem;letter-spacing:.06em;
+  color:rgba(200,169,126,.55);margin:0 .15rem;
+}
+
+/* Shading laid over a page while it turns (opacity driven from JS) */
+.hf-shade{
+  position:absolute;inset:0;z-index:60;pointer-events:none;
+  opacity:0;
+}
+
+@media (max-width:600px){
+  .hf-toggle{right:1rem;bottom:1rem;font-size:.6rem;padding:.55rem .9rem}
+  .hf-panel{right:1rem;bottom:3.8rem;width:160px}
+}
