@@ -37,21 +37,21 @@ function stampFor(id){
   return '';
 }
 
-// Wider screens show one painting of a corner of a pâtisserie: an oak
-// cabinet with all six cakes in it (images/shelf/room/room.webp). Each cake
-// also exists as a cut-out of that painting, plus a patch of bare shelf to
-// put behind it: at rest the painting shows alone; when a cake is hovered or
-// chosen, its patch and cut-out appear and the cut-out rises.
-// Boxes are in % of the painting's width (1536px): x, y, w, h of the
-// cut-out; tx, ty place the top centre of its label (over the blank card
-// painted on the shelf edge) within the box.
+// Wider screens show one painting of a pâtisserie cabinet with all six cakes
+// in it (images/shelf/scene/cabinet.webp). Each cake also exists as a cut-out
+// of that painting, plus a patch of bare shelf to put behind it: at rest the
+// painting shows alone; when a cake is hovered or chosen, its patch and
+// cut-out appear and the cut-out rises.
+// Boxes are in % of the painting's width (1536px): x, y, w, h of the cut-out;
+// tx is the plate's centre within the box; ty the label's top within the box
+// (on the shelf lip for the upper floor, on the plinth for the lower).
 const SCENE = {
-  orange:       { x:13.021, y:18.229, w:22.135, h:15.951, tx:10.547, ty:15.495 },
-  marble:       { x:38.086, y:18.229, w:21.81,  h:15.951, tx:11.068, ty:15.495 },
-  classic:      { x:64.128, y:18.229, w:22.461, h:15.951, tx:10.742, ty:15.495 },
-  rum:          { x:13.021, y:37.76,  w:22.461, h:16.602, tx:10.742, ty:16.406 },
-  blueberry:    { x:38.086, y:37.76,  w:22.461, h:16.602, tx:11.068, ty:16.406 },
-  chocZucchini: { x:64.128, y:37.76,  w:23.112, h:16.602, tx:11.068, ty:16.406 },
+  orange:       { x:10.742, y:21.484, w:19.531, h:14.323, tx: 9.635, ty:14.714 },
+  marble:       { x:39.388, y:21.484, w:19.857, h:14.323, tx: 9.896, ty:14.714 },
+  classic:      { x:69.01,  y:21.484, w:20.182, h:14.323, tx: 9.896, ty:14.714 },
+  rum:          { x:10.417, y:44.922, w:20.182, h:14.974, tx:10.067, ty:15.234 },
+  blueberry:    { x:39.388, y:44.922, w:20.182, h:14.974, tx: 9.993, ty:15.234 },
+  chocZucchini: { x:68.685, y:44.922, w:20.182, h:14.974, tx: 9.863, ty:15.234 },
 };
 
 // A pencil-drawn arrow for the chapter links.
@@ -79,8 +79,8 @@ function sceneCakeHTML(id, r, i){
   return `
     <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}"
             style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw;--tx:${b.tx}cqw;--ty:${b.ty}cqw">
-      <img class="slice-bare" src="./images/shelf/room/${id}-bare.webp" alt="" draggable="false">
-      <img class="slice-img" src="./images/shelf/room/${id}.webp" alt="" draggable="false">
+      <img class="slice-bare" src="./images/shelf/scene/${id}-bare.webp" alt="" draggable="false">
+      <img class="slice-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false">
       ${tagHTML(id, r, i)}
     </button>`;
 }
@@ -117,7 +117,7 @@ function buildShelf(){
   } else {
     rows = `
       <div class="cabinet">
-        <img class="cabinet-img" src="./images/shelf/room/room.webp" alt="" width="1536" height="1024" aria-hidden="true">
+        <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
         ${entries.map(([id, r], i) => sceneCakeHTML(id, r, i)).join('')}
       </div>`;
   }
