@@ -47,6 +47,12 @@
   color:rgba(200,169,126,.55);margin:0 .15rem;
 }
 
+/* Live tracker readout, shown with ?debug in the URL */
+.hf-debug{
+  font-family:var(--font-mono);font-size:.62rem;line-height:1.4;
+  color:#E2B84A;margin:.35rem .15rem 0;
+}
+
 /* Shading laid over a page while it turns (opacity driven from JS) */
 .hf-shade{
   position:absolute;inset:0;z-index:60;pointer-events:none;

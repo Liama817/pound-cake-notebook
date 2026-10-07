@@ -251,8 +251,9 @@ const Flip = (() => {
 // Feed it one hand's 21 landmarks per video frame (or null for no hand).
 // Landmark indices: 0 wrist, 4 thumb tip, 8 index tip, 9 middle knuckle.
 
-const PINCH_ON = 0.32;      // pinch gap / hand size to start grabbing
-const PINCH_OFF = 0.48;     // …and to let go (gap avoids flicker)
+const PINCH_ON = 0.38;      // pinch gap / hand size to start grabbing
+const PINCH_OFF = 0.62;     // …and to let go (wide gap so a loosening pinch mid-turn holds)
+const LOST_GRACE_MS = 350;  // hand can vanish this long (motion blur) without dropping the page
 const DRAG_START = 0.035;   // movement (fraction of frame width) before a drag picks a direction
 const DRAG_FULL = 0.30;     // movement for a complete turn
 const SWIPE_DIST = 0.22;    // open-hand sweep that counts as a swipe…
@@ -261,7 +262,7 @@ const COOLDOWN_MS = 900;    // wait after a swipe before another
 const WAVE_SWING = 0.035;   // palm travel that counts as one swing of a wave
 const WAVE_MS = 1500;       // two direction changes within this long = a wave
 
-// mode 'turn' turns pages; mode 'wave' only listens for a hello wave.
+// mode 'turn' turns pages; 'wave' only listens for a hello wave; 'idle' ignores the hand.
 function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
   let mode = 'turn';
   let pinched = false;
@@ -269,9 +270,13 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
   let trail = [];             // recent open-hand positions for swipe detection
   let lastSwipe = -Infinity;
   let waveDir = 0, waveEdge = null, reversals = [];   // wave: current heading, furthest point, turn times
+  let lastSeen = -Infinity;
+  let debug = { hand:false, gap:null, state:'' };
 
-  // Distance in frame units, correcting x for the video's aspect ratio.
-  const dist = (a, b) => Math.hypot((a.x - b.x) * aspect, a.y - b.y);
+  // 3D distance in frame-height units. x and z are scaled by frame width,
+  // y by height. Using depth too keeps the hand's measured size steady
+  // when it tilts — in 2D a turned hand looks smaller and a pinch looks open.
+  const dist = (a, b) => Math.hypot((a.x - b.x) * aspect, a.y - b.y, ((a.z || 0) - (b.z || 0)) * aspect);
 
   function letGo(){
     if(pinched && dir) flip.release();
@@ -299,12 +304,18 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
 
   function feed(landmarks, now = performance.now()){
     if(!landmarks){
+      debug = { hand:false, gap:null, state: pinched ? 'lost (holding)' : 'no hand' };
+      // A fast-moving hand often drops out for a frame or two: keep hold of the page briefly.
+      if(pinched && now - lastSeen < LOST_GRACE_MS) return;
       letGo(); trail = []; resetWave();
-      onState(mode === 'wave' ? 'wave' : 'noHand');
+      if(mode !== 'idle') onState(mode === 'wave' ? 'wave' : 'noHand');
       return;
     }
+    lastSeen = now;
+    if(mode === 'idle'){ debug = { hand:true, gap:null, state:'waiting' }; return; }
     if(mode === 'wave'){
-      if(trackWave(1 - landmarks[9].x, now)){ mode = 'turn'; onWave(); }
+      debug = { hand:true, gap:null, state:`wave ${reversals.length}/2` };
+      if(trackWave(1 - landmarks[9].x, now)){ mode = 'idle'; onWave(); }
       else onState('wave');
       return { pinched:false };
     }
@@ -326,7 +337,10 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
         const want = dx < 0 ? 1 : -1;       // pull left = next page
         if(flip.begin(want)) dir = want; else refused = true;
       }
-      if(dir) flip.update((dir > 0 ? -dx : dx) / DRAG_FULL);
+      const p = dir ? (dir > 0 ? -dx : dx) / DRAG_FULL : 0;
+      if(dir) flip.update(p);
+      debug = { hand:true, gap, state: refused ? 'pinched · no page that way'
+        : dir ? `turning ${dir > 0 ? 'forward' : 'back'} ${Math.round(Math.min(1, Math.max(0, p)) * 100)}%` : 'pinched · move sideways' };
       onState(refused ? 'end' : 'grab');
       return { pinched, gap };
     }
@@ -336,6 +350,7 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
     trail.push({ x:palmX, t:now });
     trail = trail.filter(s => now - s.t <= SWIPE_MS);
     const sweep = palmX - trail[0].x;
+    debug = { hand:true, gap, state:'open hand' };
     if(Math.abs(sweep) > SWIPE_DIST && now - lastSwipe > COOLDOWN_MS && !flip.isBusy()){
       lastSwipe = now; trail = [];
       onState(flip.turn(sweep < 0 ? 1 : -1) ? 'ready' : 'end');
@@ -350,6 +365,7 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
     reset(){ letGo(); trail = []; resetWave(); },
     setMode(m){ mode = m; resetWave(); },
     get mode(){ return mode; },
+    get debug(){ return debug; },
   };
 }
 
@@ -382,6 +398,7 @@ function buildUI(){
     </div>
     <p class="hf-status" role="status" aria-live="polite"></p>
     <p class="hf-privacy" data-i18n="hand.privacy">${t('hand.privacy')}</p>
+    <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
   document.body.append(backdrop, panel, btn);
@@ -391,6 +408,7 @@ function buildUI(){
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
     skip: panel.querySelector('.hf-skip'),
+    debug: panel.querySelector('.hf-debug'),
   };
 }
 
@@ -416,6 +434,9 @@ function drawHand(canvas, landmarks, pinched){
 }
 
 const ui = buildUI();
+// Add ?debug to the address to see what the tracker sees, live.
+const DEBUG = new URLSearchParams(location.search).has('debug');
+ui.debug.hidden = !DEBUG;
 let handLandmarker = null;
 let stream = null;
 let running = false;
@@ -457,6 +478,11 @@ function loop(){
     const hand = result.landmarks && result.landmarks[0] || null;
     const info = gesture.feed(hand);
     drawHand(ui.canvas, hand, info && info.pinched);
+    if(DEBUG){
+      const d = gesture.debug;
+      ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · pinch ${d.gap == null ? '–' : d.gap.toFixed(2)}`
+        + ` (grab < ${PINCH_ON}, let go > ${PINCH_OFF}) · ${d.state}`;
+    }
   }
   requestAnimationFrame(loop);
 }
@@ -513,9 +539,9 @@ function stop(){
 
 // ── WELCOME INTRO ───────────────────────────────────────────
 // "Say hi" on the cover → big mirror → wave → the mirror shrinks into the
-// corner → the cover rests for 2 s → it opens onto the first history page.
+// corner → the cover rests for 1 s → it opens onto the first history page.
 
-const COVER_PAUSE_MS = 2000;
+const COVER_PAUSE_MS = 1000;
 
 function startIntro(){
   setI18n(ui.skip, 'hand.skip');
@@ -544,6 +570,9 @@ function greeted(){
     introTimer = setTimeout(() => {
       holdStatus = false;
       if(isCoverOpen()) Flip.turn(1);
+      // Page-turning starts once the book is open, so a lingering wave
+      // during the intro isn't read as a swipe.
+      gesture.setMode('turn');
     }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
   }, 700);
 }
