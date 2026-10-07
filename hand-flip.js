@@ -1,6 +1,7 @@
 // ── HAND PAGE-TURN ──────────────────────────────────────────
 // Turn the notebook's pages with your real hand, using MediaPipe
-// Hand Landmarker on the webcam. Everything runs in the browser.
+// Gesture Recognizer on the webcam (Hand Landmarker if that can't load).
+// Everything runs in the browser.
 //
 // Layers, each usable on its own:
 //   1. Pages   — the notebook's sections in reading order, and how to jump to one.
@@ -8,7 +9,10 @@
 //   3. Surface — routes a turn to the history book (history-book.js), where the
 //                hand drags a real curling page, or to Flip everywhere else.
 //   4. Gesture — turns hand landmarks into a sweep (or a hello wave).
-// The camera code at the bottom only feeds landmarks into the Gesture layer.
+//   5. Pointer — on the Recipes shelf and its recipe card: point to choose a
+//                cake, pinch to open it, pinch and drag to scroll the card,
+//                hold an open palm to close it, hold 👍 / 🤟 to mark it.
+// The camera code at the bottom feeds each frame to Pointer, then Gesture.
 //
 // Relies on globals from index.html: openBook, switchSection, buildHistSlideshow,
 // histSetPositions, currentEraIndex, ERA_KEYS, T, t — and window.historyBook
@@ -17,6 +21,7 @@
 const MEDIAPIPE_VERSION = '1.1.0';
 const MEDIAPIPE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}`;
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+const GESTURE_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
 
 Object.assign(T.en, {
   'hand.toggle': 'Turn pages by hand',
@@ -35,6 +40,16 @@ Object.assign(T.en, {
   'hand.hello': 'Hello! Opening your notebook…',
   'hand.skip': 'Skip',
   'hand.openInstead': 'Open the notebook instead',
+  'hand.shelf': 'Point at a cake, then pinch to open it. Sweep an open hand to turn the page.',
+  'hand.pointing': 'Pinch to open this cake.',
+  'hand.card': 'Pinch and drag to scroll. Hold an open palm to close. Hold 👍 for baked, 🤟 for want to bake.',
+  'hand.hold.close': 'Keep holding to close…',
+  'hand.hold.made': 'Keep holding to mark as baked…',
+  'hand.hold.wish': 'Keep holding to add to want to bake…',
+  'hand.marked.made': '✓ Marked as baked.',
+  'hand.unmarked.made': 'Baked mark removed.',
+  'hand.marked.wish': '♡ Added to want to bake.',
+  'hand.unmarked.wish': 'Removed from want to bake.',
 });
 Object.assign(T.zh, {
   'hand.toggle': '用手翻页',
@@ -53,6 +68,16 @@ Object.assign(T.zh, {
   'hand.hello': '你好！正在为你打开笔记本…',
   'hand.skip': '跳过',
   'hand.openInstead': '直接打开笔记本',
+  'hand.shelf': '用食指指向一块蛋糕，捏合手指打开。张开手掌划动可以翻页。',
+  'hand.pointing': '捏合手指，打开这块蛋糕。',
+  'hand.card': '捏住并上下拖动来滚动。张开手掌停住，关闭食谱。比 👍 标记做过，比 🤟 加入想做。',
+  'hand.hold.close': '保持住，即将关闭…',
+  'hand.hold.made': '保持住，标记为做过…',
+  'hand.hold.wish': '保持住，加入想做…',
+  'hand.marked.made': '✓ 已标记为做过。',
+  'hand.unmarked.made': '已取消“做过”。',
+  'hand.marked.wish': '♡ 已加入想做。',
+  'hand.unmarked.wish': '已从想做中移除。',
 });
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -388,7 +413,9 @@ function createGesture({ surface, onState, onWave = () => {} }){
     return false;
   }
 
-  function feed(landmarks, now = performance.now()){
+  // canStart false: keep watching the hand, but don't start a new turn
+  // (the Pointer layer is using the hand to point or pinch).
+  function feed(landmarks, now = performance.now(), canStart = true){
     if(!landmarks){
       // A fast-moving hand often drops out for a frame or two: until it has
       // been gone a moment, change nothing (keep the page, keep the lock).
@@ -431,7 +458,7 @@ function createGesture({ surface, onState, onWave = () => {} }){
     debug = { hand:true, state:'open hand · ready' };
     const want = dx < 0 ? 1 : -1;                       // sweep left = next page
     const needed = want > 0 ? SWEEP_START : SWEEP_START * BACK_SWEEP;
-    if(Math.abs(dx) > needed && now >= blockedUntil && now - appearedAt >= SETTLE_MS && !surface.busy()){
+    if(canStart && Math.abs(dx) > needed && now >= blockedUntil && now - appearedAt >= SETTLE_MS && !surface.busy()){
       const startX = trail[0].x;
       const inZone = want > 0 ? startX > 0.5 : startX < 0.4;
       if(inZone && want !== lockedDir){
@@ -458,6 +485,126 @@ function createGesture({ surface, onState, onWave = () => {} }){
     get mode(){ return mode; },
     get debug(){ return debug; },
   };
+}
+
+// ── 5. POINTER ──────────────────────────────────────────────
+// The Recipes shelf and its recipe card, by hand.
+//   On the shelf: point with the index finger (other fingers curled) and a
+//   cursor follows the fingertip; the cake under it lifts. Pinch (thumb tip
+//   to index tip) to open that cake's recipe.
+//   On the card: pinch and drag up or down to scroll it. Hold an open palm
+//   to close it, hold 👍 to mark it baked, hold 🤟 to add it to want-to-bake.
+// While the hand points or pinches, sweeps are held back so choosing a cake
+// can't turn the chapter. `env` connects it to the page (see the camera code).
+//
+// feed(landmarks, pose, now) → { claimed, status, progress }
+//   pose: the Gesture Recognizer's label ('Open_Palm', 'Thumb_Up',
+//   'ILoveYou', …) or null when only Hand Landmarker is available.
+
+const PINCH_ON = 0.25;      // thumb–index gap (in palm lengths) that counts as a pinch…
+const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids flicker).
+                            // A fist's thumb rests about 0.4–0.5 from the index tip.
+const HOLD_MS = 700;        // how long a pose must be held to act
+const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
+const SCROLL_GAIN = 2.2;    // card scroll per unit of hand travel, in card heights
+
+const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+// Which fingers are straight, and how far apart thumb and index tips are.
+// A finger is straight when its tip is clearly farther from the wrist than its middle joint.
+function handShape(lm){
+  const wrist = lm[0];
+  const palm = dist2d(lm[0], lm[9]) || 1e-6;
+  const straight = (tip, pip) => dist2d(lm[tip], wrist) > dist2d(lm[pip], wrist) * 1.12;
+  const index = straight(8, 6), middle = straight(12, 10), ring = straight(16, 14), pinky = straight(20, 18);
+  return {
+    pinchGap: dist2d(lm[4], lm[8]) / palm,
+    pointing: index && !middle && !ring && !pinky,
+    open: index && middle && ring && pinky,
+  };
+}
+
+function createPointer(env){
+  let pinching = false;
+  let lastPinchY = null;
+  let cursor = null;          // smoothed fingertip, 0–1 across the window
+  let hold = { kind:null, since:0, fired:false };
+  let quietUntil = -Infinity; // no sweeps until then (just closed a card)
+
+  function release(){
+    pinching = false; lastPinchY = null; cursor = null;
+    hold = { kind:null, since:0, fired:false };
+    env.point(null);
+    env.cursor(null);
+  }
+
+  function feed(lm, pose, now = performance.now()){
+    if(!lm){ release(); return { claimed: now < quietUntil, status:null }; }
+    const shape = handShape(lm);
+    const wasPinching = pinching;
+    pinching = pinching ? shape.pinchGap < PINCH_OFF : shape.pinchGap < PINCH_ON;
+    // A pinch has no name of its own: a named pose (👍, 🤟, fist, open palm…) means it isn't one.
+    if(pose && pose !== 'Pointing_Up') pinching = false;
+    const pinchStarted = pinching && !wasPinching;
+    // Pinch point: halfway between thumb and index tips. Mirror x like a mirror.
+    const tip = pinching
+      ? { x:(lm[4].x + lm[8].x) / 2, y:(lm[4].y + lm[8].y) / 2 }
+      : lm[8];
+
+    // ── Recipe card open ──
+    if(env.cardOpen()){
+      env.point(null); env.cursor(null); cursor = null;
+      if(pinching){
+        if(lastPinchY !== null) env.scrollCard((lastPinchY - tip.y) * SCROLL_GAIN);   // hand up = read further down
+        lastPinchY = tip.y;
+        hold = { kind:null, since:now, fired:false };
+        return { claimed:true, status:'card' };
+      }
+      lastPinchY = null;
+      const kind = pose === 'Thumb_Up' ? 'made'
+                 : pose === 'ILoveYou' ? 'wish'
+                 : (pose === 'Open_Palm' || (!pose && shape.open)) ? 'close'
+                 : null;
+      if(kind !== hold.kind) hold = { kind, since:now, fired:false };
+      if(!kind || hold.fired) return { claimed:true, status:'card' };
+      const progress = Math.min(1, (now - hold.since) / HOLD_MS);
+      if(progress < 1) return { claimed:true, status:'hold.' + kind, progress };
+      hold.fired = true;      // the pose has to change before it can act again
+      if(kind === 'close'){
+        env.closeCard();
+        quietUntil = now + AFTER_CLOSE_MS;
+        return { claimed:true, status:'shelf' };
+      }
+      const on = env.mark(kind);
+      return { claimed:true, status:(on ? 'marked.' : 'unmarked.') + kind, flash:true };
+    }
+
+    // ── Shelf showing ──
+    hold = { kind:null, since:0, fired:false };
+    lastPinchY = null;
+    if(!env.shelfActive()){ env.point(null); env.cursor(null); cursor = null; return { claimed: now < quietUntil, status:null }; }
+    if(!shape.pointing && !pinching){
+      env.point(null); env.cursor(null); cursor = null;
+      return { claimed: now < quietUntil, status:'shelf' };
+    }
+    // The middle of the camera frame covers the whole window, so the arm needn't stretch.
+    const u = clamp01((1 - tip.x - 0.2) / 0.6);
+    const v = clamp01((tip.y - 0.15) / 0.6);
+    cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
+    const id = env.cakeAt(cursor.u, cursor.v);
+    env.point(id);
+    env.cursor(cursor, pinching);
+    if(cursor.v > 0.9) env.scrollPage((cursor.v - 0.9) * 120);   // near the edge: bring more shelf into view
+    if(cursor.v < 0.1) env.scrollPage((cursor.v - 0.1) * 120);
+    if(pinchStarted && id){
+      env.point(null); env.cursor(null); cursor = null;
+      env.pick(id);
+      return { claimed:true, status:'card' };
+    }
+    return { claimed:true, status: id ? 'pointing' : 'shelf' };
+  }
+
+  return { feed, release };
 }
 
 // ── CAMERA + UI ─────────────────────────────────────────────
@@ -492,9 +639,14 @@ function buildUI(){
     <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
-  document.body.append(backdrop, panel, btn);
+  // The fingertip on the page while pointing at the Recipes shelf
+  const cursor = document.createElement('div');
+  cursor.className = 'hf-cursor';
+  cursor.hidden = true;
+
+  document.body.append(backdrop, panel, btn, cursor);
   return {
-    btn, sayHi, backdrop, panel,
+    btn, sayHi, backdrop, panel, cursor,
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
@@ -508,7 +660,7 @@ function setI18n(el, key){
   el.textContent = t(key);
 }
 
-function drawHand(canvas, landmarks, active){
+function drawHand(canvas, landmarks, active, progress = 0){
   const ctx = canvas.getContext('2d');
   const w = canvas.width = canvas.clientWidth * devicePixelRatio;
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
@@ -522,42 +674,127 @@ function drawHand(canvas, landmarks, active){
   const tip = landmarks[8];
   ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
   ctx.beginPath(); ctx.arc(tip.x * w, tip.y * h, (active ? 7 : 4.5) * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+  // A held pose (close, baked, want to bake) fills a ring around the palm.
+  if(progress > 0){
+    const palm = landmarks[9];
+    ctx.strokeStyle = '#E2B84A';
+    ctx.lineWidth = 3 * devicePixelRatio;
+    ctx.beginPath();
+    ctx.arc(palm.x * w, palm.y * h, 22 * devicePixelRatio, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 const ui = buildUI();
 // Add ?debug to the address to see what the tracker sees, live.
 const DEBUG = new URLSearchParams(location.search).has('debug');
 ui.debug.hidden = !DEBUG;
-let handLandmarker = null;
+let tracker = null;        // { run(video, time) → { hand, pose } }
 let stream = null;
 let running = false;
 let lastVideoTime = -1;
 let introTimer = null;
 let holdStatus = false;   // keep the "Hello!" message up while the intro plays out
+let pointerStatus = null; // the Pointer's message this frame, which outranks the sweep's
+let flashUntil = 0;       // keep a "Marked as baked" message up for a moment
+let frameNow = 0;         // the current frame's time, so every timer here uses the same clock
+
+function say(key){
+  const k = 'hand.' + key;
+  if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
+}
 
 const gesture = createGesture({
   surface: Surface,
   onState: key => {
-    if(holdStatus) return;
-    const k = 'hand.' + key;
-    if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
+    if(holdStatus || frameNow < flashUntil) return;
+    if(pointerStatus && key !== 'grab') return;
+    say(key);
   },
   onWave: () => greeted(),
 });
 
-async function loadLandmarker(){
-  const { FilesetResolver, HandLandmarker } = await import(`${MEDIAPIPE_URL}/vision_bundle.mjs`);
+const pointer = createPointer({
+  // A cake being lifted counts too: its card is about to open.
+  cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
+  shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
+    !!document.getElementById('recipes-panel')?.classList.contains('active'),
+  cakeAt(u, v){
+    const x = u * innerWidth, y = v * innerHeight, pad = 8;
+    const hit = window.recipeShelf.cakes().find(el => {
+      const r = el.getBoundingClientRect();
+      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+    });
+    return hit ? hit.dataset.recipe : null;
+  },
+  point: id => window.recipeShelf?.point(id),
+  pick: id => window.recipeShelf.pick(id),
+  cursor(c, pinching){
+    ui.cursor.hidden = !c;
+    if(!c) return;
+    ui.cursor.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
+    ui.cursor.classList.toggle('pinch', !!pinching);
+  },
+  scrollCard(amount){
+    const body = document.querySelector('#recipe-modal .rm-body-scroll');
+    if(body) body.scrollTop += amount * body.clientHeight;
+  },
+  scrollPage: dy => document.body.scrollBy(0, dy),
+  closeCard: () => window.closeRecipeModal(),
+  // Toggle the card's stamp, as its buttons do; returns whether it is now on.
+  mark(kind){
+    if(kind === 'made') toggleMade(); else toggleWish();
+    const s = getStampState(rmCurrentId);
+    return kind === 'made' ? s.made : s.wish;
+  },
+});
+
+// Gesture Recognizer gives the same 21 hand points as Hand Landmarker plus a
+// named pose (👍, 🤟, open palm…). If it can't load, fall back to the plain
+// tracker: pointing, pinching and sweeping still work, the named poses don't.
+async function loadTracker(){
+  const { FilesetResolver, GestureRecognizer, HandLandmarker } = await import(`${MEDIAPIPE_URL}/vision_bundle.mjs`);
   const fileset = await FilesetResolver.forVisionTasks(`${MEDIAPIPE_URL}/wasm`);
-  const options = delegate => ({
-    baseOptions:{ modelAssetPath:MODEL_URL, delegate },
-    runningMode:'VIDEO',
-    numHands:1,
-  });
+  const create = async (Task, model) => {
+    const options = delegate => ({ baseOptions:{ modelAssetPath:model, delegate }, runningMode:'VIDEO', numHands:1 });
+    try { return await Task.createFromOptions(fileset, options('GPU')); }
+    catch(err){ return Task.createFromOptions(fileset, options('CPU')); }
+  };
   try {
-    return await HandLandmarker.createFromOptions(fileset, options('GPU'));
+    const recognizer = await create(GestureRecognizer, GESTURE_MODEL_URL);
+    return {
+      run(video, time){
+        const r = recognizer.recognizeForVideo(video, time);
+        const top = r.gestures && r.gestures[0] && r.gestures[0][0];
+        return {
+          hand: r.landmarks && r.landmarks[0] || null,
+          pose: top && top.score > 0.6 && top.categoryName !== 'None' ? top.categoryName : null,
+        };
+      },
+    };
   } catch(err){
-    return HandLandmarker.createFromOptions(fileset, options('CPU'));
+    console.warn('[hand-flip] gesture recognizer unavailable, using hand landmarks only', err);
+    const landmarker = await create(HandLandmarker, MODEL_URL);
+    return {
+      run(video, time){
+        const r = landmarker.detectForVideo(video, time);
+        return { hand: r.landmarks && r.landmarks[0] || null, pose: null };
+      },
+    };
   }
+}
+
+// One video frame: the Pointer looks first (it may hold sweeps back), then the sweep detector.
+function handleFrame(hand, pose, now = performance.now()){
+  frameNow = now;
+  let p = { claimed:false, status:null };
+  if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now);
+  else pointer.release();
+  pointerStatus = p.status;
+  const info = gesture.feed(hand, now, !p.claimed);
+  if(p.flash) flashUntil = now + 1600;
+  if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
+  return { active: !!(info && info.active), progress: p.progress || 0 };
 }
 
 function loop(){
@@ -565,13 +802,13 @@ function loop(){
   const v = ui.video;
   if(v.readyState >= 2 && v.currentTime !== lastVideoTime){
     lastVideoTime = v.currentTime;
-    const result = handLandmarker.detectForVideo(v, performance.now());
-    const hand = result.landmarks && result.landmarks[0] || null;
-    const info = gesture.feed(hand);
-    drawHand(ui.canvas, hand, info && info.active);
+    const now = performance.now();
+    const { hand, pose } = tracker.run(v, now);
+    const frame = handleFrame(hand, pose, now);
+    drawHand(ui.canvas, hand, frame.active, frame.progress);
     if(DEBUG){
       const d = gesture.debug;
-      ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · ${d.state}`;
+      ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · ${pose || '–'} · ${d.state}`;
     }
   }
   requestAnimationFrame(loop);
@@ -584,7 +821,7 @@ async function start(){
   setI18n(ui.btn, 'hand.stop');
   try {
     setI18n(ui.status, 'hand.loading');
-    handLandmarker = handLandmarker || await loadLandmarker();
+    tracker = tracker || await loadTracker();
     setI18n(ui.status, 'hand.camera');
     stream = await navigator.mediaDevices.getUserMedia({
       video:{ facingMode:'user', width:{ ideal:640 }, height:{ ideal:480 } },
@@ -612,6 +849,7 @@ async function start(){
 function stopCamera(){
   running = false;
   gesture.reset();
+  pointer.release();
   if(stream) stream.getTracks().forEach(tr => tr.stop());
   stream = null;
   ui.video.srcObject = null;
@@ -702,4 +940,4 @@ ui.btn.addEventListener('click', () => {
 });
 
 // Exposed for testing and for other controls (e.g. keyboard) to reuse.
-window.handFlip = { Flip, Surface, createGesture, gesture };
+window.handFlip = { Flip, Surface, createGesture, gesture, createPointer, handShape, pointer, handleFrame };

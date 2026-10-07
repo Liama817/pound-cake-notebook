@@ -205,9 +205,17 @@ window.closeRecipeModal = function(){
 window.buildRecipesPage = buildShelf;
 if(document.getElementById('recipes-panel')?.classList.contains('active')) buildShelf();
 
-// For the hand tracker (and tests): the cakes on the shelf, and picking one.
+// The hand tracker lights the cake under the fingertip, as a mouse hover would.
+function point(id){
+  document.querySelectorAll('#recipes-panel .slice').forEach(btn => {
+    btn.classList.toggle('pointed', btn.dataset.recipe === id);
+  });
+}
+
+// For the hand tracker (and tests): the cakes on the shelf, pointing at one, and picking it.
 window.recipeShelf = {
   pick,
+  point,
   cakes: () => [...document.querySelectorAll('#recipes-panel .slice')],
   get open(){ return !!liftedId; },
 };

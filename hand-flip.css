@@ -18,9 +18,10 @@
 .hf-toggle[aria-pressed="true"]{color:#E2B84A;border-color:rgba(226,184,74,.8)}
 .hf-toggle:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
 
-/* Camera preview card */
+/* Camera preview card — above the recipe card (z 700), so its hints and
+   the hold ring stay visible while a recipe is open */
 .hf-panel{
-  position:fixed;right:1.4rem;bottom:4.4rem;z-index:600;
+  position:fixed;right:1.4rem;bottom:4.4rem;z-index:720;
   width:200px;
   background:rgba(20,12,5,.88);
   border:1px solid rgba(210,185,145,.3);
@@ -52,6 +53,17 @@
   font-family:var(--font-mono);font-size:.62rem;line-height:1.4;
   color:#E2B84A;margin:.35rem .15rem 0;
 }
+
+/* The fingertip on the page while pointing at the Recipes shelf */
+.hf-cursor{
+  position:fixed;left:0;top:0;z-index:730;pointer-events:none;
+  width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;
+  border:2px solid #E2B84A;background:rgba(226,184,74,.18);
+  box-shadow:0 0 0 1px rgba(255,248,230,.7), 0 2px 8px rgba(60,40,15,.35);
+  transition:width .15s ease,height .15s ease,margin .15s ease,background .15s ease;
+}
+.hf-cursor[hidden]{display:none}
+.hf-cursor.pinch{width:16px;height:16px;margin:-8px 0 0 -8px;background:#E2B84A}
 
 /* Shading laid over a page while it turns (opacity driven from JS) */
 .hf-shade{
