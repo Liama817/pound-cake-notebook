@@ -12,16 +12,18 @@
 // closeRecipeModal, getStampState, currentLang, T, t.
 
 Object.assign(T.en, {
-  'shelf.sign': 'Today’s Pound Cakes',
-  'shelf.hint': 'Choose a cake to open its recipe',
+  'shelf.count': '{n} cakes on the shelf',
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
+  'shelf.next': 'Next chapter',
+  'shelf.prev': 'Previous chapter',
 });
 Object.assign(T.zh, {
-  'shelf.sign': '今日磅蛋糕',
-  'shelf.hint': '选一块蛋糕，打开它的食谱',
+  'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
+  'shelf.next': '下一章',
+  'shelf.prev': '上一章',
 });
 
 const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
@@ -35,31 +37,66 @@ function stampFor(id){
   return '';
 }
 
-// Each cake is one painted piece: a slice already on its porcelain plate,
-// all six painted from one reference so the plate, angle, light and scale
-// match. The oak shelf, brackets included, is a single painted plank.
-function cakeHTML(id, r, i){
+// Wider screens show one painting of a pâtisserie cabinet with all six cakes
+// in it (images/shelf/scene/cabinet.webp). Each cake also exists as a cut-out
+// of that painting, plus a patch of bare shelf to put behind it: at rest the
+// painting shows alone; when a cake is hovered or chosen, its patch and
+// cut-out appear and the cut-out rises.
+// Boxes are in % of the painting's width (1536px): x, y, w, h of the cut-out;
+// tx is the plate's centre within the box; ty the label's top within the box
+// (on the shelf lip for the upper floor, on the plinth for the lower).
+const SCENE = {
+  orange:       { x:10.417, y:20.833, w:20.182, h:14.974, tx: 9.93, ty:15.77 },
+  marble:       { x:39.388, y:20.833, w:19.857, h:14.974, tx: 9.86, ty:15.77 },
+  classic:      { x:68.88,  y:20.833, w:20.052, h:14.974, tx: 9.99, ty:15.77 },
+  rum:          { x:10.417, y:44.271, w:20.182, h:15.299, tx:10.12, ty:15.93 },
+  blueberry:    { x:39.388, y:44.271, w:20.182, h:15.299, tx: 9.96, ty:15.93 },
+  chocZucchini: { x:68.49,  y:44.271, w:20.182, h:15.299, tx:10.09, ty:15.93 },
+};
+
+function tagHTML(id, r, i){
   const name = t('recipe.' + id) || r.name;
   const source = currentLang === 'zh' ? (r.zh_source || r.source) : r.source;
+  return `
+      <span class="slice-tag">
+        <span class="tag-no">Nº ${i + 1}</span>
+        <span class="tag-text">
+          <span class="tag-name">${name}</span>
+          <span class="tag-src">${source}</span>
+        </span>
+        ${stampFor(id)}
+      </span>`;
+}
+
+function sceneCakeHTML(id, r, i){
+  const b = SCENE[id];
+  const name = t('recipe.' + id) || r.name;
+  return `
+    <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}"
+            style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw;--tx:${b.tx}cqw;--ty:${b.ty}cqw">
+      <img class="slice-bare" src="./images/shelf/scene/${id}-bare.webp" alt="" draggable="false">
+      <img class="slice-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false">
+      ${tagHTML(id, r, i)}
+    </button>`;
+}
+
+// Phones: a painted oak plank per pair of cakes, each cake its own painting.
+function plankCakeHTML(id, r, i){
+  const name = t('recipe.' + id) || r.name;
   return `
     <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}">
       <span class="slice-stage">
         <span class="plate-shadow" aria-hidden="true"></span>
-        <img class="slice-img" src="./images/shelf/${id}.webp" alt="" width="640" height="486" draggable="false">
+        <img class="slice-img" src="./images/shelf/${id}.webp" alt="" width="640" height="478" draggable="false">
       </span>
-      <span class="slice-tag">
-        <span class="tag-no">No. ${String(i + 1).padStart(2, '0')}</span>
-        <span class="tag-name">${name}</span>
-        <span class="tag-src">${source}</span>
-        ${stampFor(id)}
-      </span>
+      ${tagHTML(id, r, i)}
     </button>`;
 }
 
 function shelfRow(items){
   return `
     <div class="shelf-row">
-      <img class="shelf-board" src="./images/shelf/shelf.webp" alt="" width="1498" height="278" aria-hidden="true">
+      <img class="shelf-board" src="./images/shelf/shelf.webp" alt="" width="1481" height="321" aria-hidden="true">
       <div class="shelf-items">${items}</div>
     </div>`;
 }
@@ -67,27 +104,32 @@ function shelfRow(items){
 function buildShelf(){
   const panel = document.getElementById('recipes-panel');
   if(!panel) return;
-  const all = Object.entries(RJ).map(([id, r], i) => cakeHTML(id, r, i));
-  const perRow = window.matchMedia('(max-width:640px)').matches ? 2 : 3;
+  const entries = Object.entries(RJ);
   let rows = '';
-  for(let k = 0; k < all.length; k += perRow) rows += shelfRow(all.slice(k, k + perRow).join(''));
+  if(window.matchMedia('(max-width:640px)').matches){
+    const all = entries.map(([id, r], i) => plankCakeHTML(id, r, i));
+    for(let k = 0; k < all.length; k += 2) rows += shelfRow(all.slice(k, k + 2).join(''));
+  } else {
+    rows = `
+      <div class="cabinet">
+        <img class="cabinet-img" src="./images/shelf/scene/cabinet.webp" alt="" width="1536" height="1024" aria-hidden="true">
+        ${entries.map(([id, r], i) => sceneCakeHTML(id, r, i)).join('')}
+      </div>`;
+  }
   panel.innerHTML = `
     <div class="shelf-wrap">
       <header class="shelf-head">
-        <div class="head-title">
-          <p class="shelf-kicker"><span data-i18n="shelf.sign">${t('shelf.sign')}</span> <span class="kicker-count">· ${String(all.length).padStart(2, '0')}</span></p>
-          <h1 class="shelf-title" data-i18n="recipes.title">${t('recipes.title')}</h1>
-        </div>
+        <h1 class="shelf-title" data-i18n="recipes.title">${t('recipes.title')}</h1>
         <div class="head-note">
+          <p class="shelf-count">${t('shelf.count').replace('{n}', entries.length)}</p>
           <p class="shelf-sub" data-i18n="recipes.subtitle">${t('recipes.subtitle')}</p>
-          <p class="shelf-hint" data-i18n="shelf.hint">${t('shelf.hint')}</p>
         </div>
       </header>
       <div class="shelf">${rows}</div>
       <nav class="shelf-foot">
-        <button type="button" data-go="history">← <span data-i18n="nav.history">${t('nav.history')}</span></button>
-        <span class="foot-mark" aria-hidden="true">❦</span>
-        <button type="button" data-go="tips"><span data-i18n="nav.tips">${t('nav.tips')}</span> →</button>
+        <button class="foot-prev" type="button" data-go="history"><small data-i18n="shelf.prev">${t('shelf.prev')}</small><span>← <span data-i18n="nav.history">${t('nav.history')}</span></span></button>
+        <button class="foot-hand" type="button" hidden></button>
+        <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span> →</span></button>
       </nav>
     </div>`;
   panel.querySelectorAll('.slice').forEach(btn => {
@@ -96,6 +138,25 @@ function buildShelf(){
   panel.querySelectorAll('[data-go]').forEach(btn => {
     btn.addEventListener('click', () => switchSection(btn.dataset.go));
   });
+  mirrorHandToggle(panel.querySelector('.foot-hand'));
+}
+
+// The floating hand-mode toggle (hand-flip.js) is hidden on this page; the
+// foot of the shelf offers the same switch as a quiet text button.
+let handObserver = null;
+function mirrorHandToggle(btn){
+  const real = document.querySelector('.hf-toggle');
+  handObserver?.disconnect();
+  if(!btn || !real) return;
+  const sync = () => {
+    btn.textContent = real.textContent;
+    btn.setAttribute('aria-pressed', real.getAttribute('aria-pressed') || 'false');
+  };
+  sync();
+  btn.hidden = false;
+  btn.addEventListener('click', () => real.click());
+  handObserver = new MutationObserver(sync);
+  handObserver.observe(real, { childList:true, characterData:true, subtree:true, attributes:true, attributeFilter:['aria-pressed'] });
 }
 
 // Recipes is a daylit paper page: let the header and hand toggle follow it.
@@ -107,7 +168,7 @@ window.switchSection = function(s){
 document.body.classList.toggle('on-recipes',
   !!document.querySelector('.tab-btn.active[data-section="recipes"]'));
 
-// Shelves hold three cakes, or two on a phone: rebuild when that changes.
+// A cabinet on wider screens, a plank per pair on a phone: rebuild when that changes.
 window.matchMedia('(max-width:640px)').addEventListener('change', () => {
   if(document.getElementById('recipes-panel')?.classList.contains('active')) buildShelf();
 });
