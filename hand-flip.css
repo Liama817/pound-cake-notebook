@@ -76,6 +76,8 @@
 .hf-sayhi:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
 body.hf-intro .hf-sayhi,
 body.hf-intro .hf-toggle{visibility:hidden}
+/* On the landing, "Say hi" is the way into hand mode — the corner toggle would only crowd it */
+#cover:not(.hidden) ~ .hf-toggle{display:none}
 
 /* Dims the cover while the mirror is centre stage */
 .hf-backdrop{

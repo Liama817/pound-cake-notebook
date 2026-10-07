@@ -2,14 +2,17 @@
 // Turn the notebook's pages with your real hand, using MediaPipe
 // Hand Landmarker on the webcam. Everything runs in the browser.
 //
-// Three layers, each usable on its own:
-//   1. Pages   — the notebook's pages in reading order, and how to jump to one.
-//   2. Flip    — the page-turn animation, driven by a single number p (0 → 1).
-//   3. Gesture — turns hand landmarks into Flip calls (pinch-and-drag, or swipe).
+// Layers, each usable on its own:
+//   1. Pages   — the notebook's sections in reading order, and how to jump to one.
+//   2. Flip    — a flat page-turn between sections, driven by one number p (0 → 1).
+//   3. Surface — routes a turn to the history book (history-book.js), where the
+//                hand drags a real curling page, or to Flip everywhere else.
+//   4. Gesture — turns hand landmarks into a sweep (or a hello wave).
 // The camera code at the bottom only feeds landmarks into the Gesture layer.
 //
 // Relies on globals from index.html: openBook, switchSection, buildHistSlideshow,
-// histSetPositions, currentEraIndex, ERA_KEYS, T, t.
+// histSetPositions, currentEraIndex, ERA_KEYS, T, t — and window.historyBook
+// when the book loaded (without it, history falls back to the old slideshow).
 
 const MEDIAPIPE_VERSION = '1.1.0';
 const MEDIAPIPE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}`;
@@ -20,9 +23,9 @@ Object.assign(T.en, {
   'hand.stop': '✋ Stop hand mode',
   'hand.loading': 'Loading hand tracking…',
   'hand.camera': 'Allow camera access to begin.',
-  'hand.ready': 'Pinch to grab the page, pull left to turn. Or swipe.',
+  'hand.ready': 'Sweep left to turn the page. To go back, lower your hand, then sweep right.',
   'hand.noHand': 'Show your hand to the camera.',
-  'hand.grab': 'Holding the page…',
+  'hand.grab': 'Turning the page…',
   'hand.end': 'No more pages this way.',
   'hand.denied': 'Camera access was blocked. Allow it in your browser to use hand mode.',
   'hand.error': 'Hand tracking could not start on this device.',
@@ -38,7 +41,7 @@ Object.assign(T.zh, {
   'hand.stop': '✋ 关闭手势翻页',
   'hand.loading': '正在加载手势识别…',
   'hand.camera': '请允许使用摄像头。',
-  'hand.ready': '捏住页面，向左拉即可翻页，也可以挥手。',
+  'hand.ready': '向左划，翻到下一页。想翻回去：先放下手，再向右划。',
   'hand.noHand': '请把手放到摄像头前。',
   'hand.grab': '正在翻页…',
   'hand.end': '这个方向没有更多页面了。',
@@ -72,6 +75,12 @@ function currentPage(){
 
 function neighbourPage(page, dir){
   const lastEra = ERA_KEYS.length - 1;
+  // With the book loaded, the cover and the eras turn inside the book;
+  // Flip only moves between the book and the other sections.
+  if(window.historyBook){
+    if(page.kind === 'cover') return null;
+    if(page.kind === 'history') return dir > 0 ? { kind:'recipes' } : null;
+  }
   switch(page.kind){
     case 'cover':   return dir > 0 ? { kind:'history', era:0 } : null;
     case 'history':
@@ -88,6 +97,7 @@ function neighbourPage(page, dir){
 function showPage(page){
   if(page.kind === 'history'){
     if(currentPage().kind !== 'history') switchSection('history');
+    if(window.historyBook){ window.scrollTo(0, 0); return; }
     buildHistSlideshow();
     currentEraIndex = page.era;
     histSetPositions(page.era, false);
@@ -115,19 +125,26 @@ const Flip = (() => {
   // at p = 0.5 it is edge-on, so we swap in the neighbour page there and
   // unfold it the rest of the way. Dragging back below 0.5 swaps back.
   function pageFlip(dir, from, to){
-    const el = document.getElementById('book-spread');
+    // History lives in the book's own stage when the book loaded.
+    const elFor = page => window.historyBook && page.kind === 'history'
+      ? window.historyBook.stage : document.getElementById('book-spread');
     const shade = document.createElement('div');
     shade.className = 'hf-shade';
-    el.appendChild(shade);
+    let el = null;
     let swapped = false;
-
-    el.style.transformOrigin = dir > 0 ? 'left center' : 'right center';
-    el.style.willChange = 'transform';
+    const target = page => {
+      if(el){ el.style.transform = el.style.transformOrigin = el.style.willChange = ''; }
+      el = elFor(page);
+      el.appendChild(shade);
+      el.style.transformOrigin = dir > 0 ? 'left center' : 'right center';
+      el.style.willChange = 'transform';
+    };
+    target(from);
 
     return {
       render(p){
         const wantSwap = p >= 0.5;
-        if(wantSwap !== swapped){ showPage(wantSwap ? to : from); swapped = wantSwap; }
+        if(wantSwap !== swapped){ showPage(wantSwap ? to : from); swapped = wantSwap; target(swapped ? to : from); }
         if(reducedMotion()) return;
         // The free edge recedes into the screen (0 → 90°), then the new page
         // unfolds back out (90° → 0). Swinging toward the viewer instead makes
@@ -247,40 +264,109 @@ const Flip = (() => {
   return { begin, update, release, turn, isBusy: () => !!active || settling };
 })();
 
-// ── 3. GESTURE ──────────────────────────────────────────────
-// Feed it one hand's 21 landmarks per video frame (or null for no hand).
-// Landmark indices: 0 wrist, 4 thumb tip, 8 index tip, 9 middle knuckle.
+// ── 3. SURFACE ──────────────────────────────────────────────
+// One interface for "a page is being turned by hand": begin(dir, v),
+// move(p, v) with p = how far the hand has swept (0 → 1 is a full turn),
+// end(). The history book gets a real curling page under the hand; other
+// sections get the flat Flip.
 
-const PINCH_ON = 0.38;      // pinch gap / hand size to start grabbing
-const PINCH_OFF = 0.62;     // …and to let go (wide gap so a loosening pinch mid-turn holds)
-const LOST_GRACE_MS = 350;  // hand can vanish this long (motion blur) without dropping the page
-const DRAG_START = 0.035;   // movement (fraction of frame width) before a drag picks a direction
-const DRAG_FULL = 0.30;     // movement for a complete turn
-const SWIPE_DIST = 0.22;    // open-hand sweep that counts as a swipe…
-const SWIPE_MS = 320;       // …within this long
-const COOLDOWN_MS = 900;    // wait after a swipe before another
-const WAVE_SWING = 0.035;   // palm travel that counts as one swing of a wave
-const WAVE_MS = 1500;       // two direction changes within this long = a wave
+const Surface = (() => {
+  let on = null;   // 'book' | 'flip' | null
+  let dir = 0;
+
+  function begin(d, v){
+    const hb = window.historyBook;
+    if(hb && hb.visible){
+      if(hb.canTurn(d)){
+        const r = hb.drag.begin(d, v);
+        if(!r) return false;
+        on = r === true ? 'book' : null;   // 'played': a phone-sized book just turns
+        dir = d;
+        return true;
+      }
+      if(d < 0 || hb.isClosed()) return false;
+      // Past the last history spread: carry on into Recipes.
+    }
+    if(!Flip.begin(d)) return false;
+    on = 'flip'; dir = d;
+    return true;
+  }
+
+  function move(p, v){
+    if(on === 'book'){
+      // The corner starts at the outer edge and travels across both pages;
+      // past the spine (u = 0.5) the library will finish the turn.
+      const u = dir > 0 ? 0.97 - p * 0.94 : 0.03 + p * 0.94;
+      window.historyBook.drag.move(u, v);
+    } else if(on === 'flip'){
+      Flip.update(p);
+    }
+  }
+
+  function end(){
+    if(on === 'book') window.historyBook.drag.end();
+    else if(on === 'flip') Flip.release();
+    on = null;
+  }
+
+  const busy = () => Flip.isBusy() || !!(window.historyBook && window.historyBook.busy);
+  return { begin, move, end, busy };
+})();
+
+// The notebook's way in: turn the book's cover, or the flat cover without it.
+function openNotebook(){
+  if(window.historyBook) window.historyBook.open();
+  else Flip.turn(1);
+}
+
+// ── 4. GESTURE ──────────────────────────────────────────────
+// Feed it one hand's 21 landmarks per video frame (or null for no hand).
+// Landmark indices: 8 index fingertip, 9 middle knuckle (palm centre).
+//
+// Turning is an open-hand sweep, like brushing a page over: the index
+// fingertip moving quickly sideways starts a turn, the page then follows
+// the hand, and the turn ends when the hand stops, leaves the frame, or
+// has swept all the way across.
+//
+// After a turn the hand has to travel back across the frame, and that
+// return stroke looks exactly like a sweep the other way. So the opposite
+// direction stays locked until the hand leaves the frame: to go back a
+// page, lower your hand, then sweep right. Forward sweeps start on the
+// right half of the frame, back sweeps on the left, and a back sweep has
+// to be brisk — raising a hand and drifting into position shouldn't turn
+// anything.
+
+const LOST_GRACE_MS = 350;   // hand can vanish this long (motion blur) without dropping the page
+const SWEEP_START = 0.045;   // fingertip travel (fraction of frame width)…
+const SWEEP_WINDOW = 200;    // …within this many ms that starts a turn
+const BACK_SWEEP = 1.5;      // going back needs a quicker sweep, so drifting into position doesn't count
+const SETTLE_MS = 250;       // a hand that just came into view must settle before it can turn
+const SWEEP_FULL = 0.34;     // fingertip travel for a complete turn
+const STILL_MS = 380;        // hand resting this long ends the turn where it is
+const STILL_EPS = 0.012;     // movement smaller than this counts as resting
+const WAVE_SWING = 0.035;    // palm travel that counts as one swing of a wave
+const WAVE_MS = 1500;        // two direction changes within this long = a wave
 
 // mode 'turn' turns pages; 'wave' only listens for a hello wave; 'idle' ignores the hand.
-function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
+function createGesture({ surface, onState, onWave = () => {} }){
   let mode = 'turn';
-  let pinched = false;
-  let anchorX = 0, smoothX = null, dir = 0, refused = false;
-  let trail = [];             // recent open-hand positions for swipe detection
-  let lastSwipe = -Infinity;
-  let waveDir = 0, waveEdge = null, reversals = [];   // wave: current heading, furthest point, turn times
+  let smoothX = null, smoothY = null;
+  let trail = [];               // recent fingertip positions {x, t}
+  let dir = 0, anchorX = 0, lastMoveX = 0, lastMoveT = 0;
+  let lockedDir = 0;            // direction refused until the hand leaves the frame
+  let blockedUntil = -Infinity;
   let lastSeen = -Infinity;
-  let debug = { hand:false, gap:null, state:'' };
+  let appearedAt = -Infinity;
+  let waveDir = 0, waveEdge = null, reversals = [];   // wave: current heading, furthest point, turn times
+  let debug = { hand:false, state:'' };
 
-  // 3D distance in frame-height units. x and z are scaled by frame width,
-  // y by height. Using depth too keeps the hand's measured size steady
-  // when it tilts — in 2D a turned hand looks smaller and a pinch looks open.
-  const dist = (a, b) => Math.hypot((a.x - b.x) * aspect, a.y - b.y, ((a.z || 0) - (b.z || 0)) * aspect);
+  const pageY = y => Math.min(0.95, Math.max(0.05, (y - 0.15) / 0.7));
 
-  function letGo(){
-    if(pinched && dir) flip.release();
-    pinched = false; dir = 0; refused = false; smoothX = null;
+  function finish(now){
+    if(!dir) return;
+    surface.end();
+    lockedDir = -dir;
+    dir = 0; trail = [];
   }
 
   function resetWave(){ waveDir = 0; waveEdge = null; reversals = []; }
@@ -304,65 +390,70 @@ function createGesture({ flip, onState, onWave = () => {}, aspect = 4 / 3 }){
 
   function feed(landmarks, now = performance.now()){
     if(!landmarks){
-      debug = { hand:false, gap:null, state: pinched ? 'lost (holding)' : 'no hand' };
-      // A fast-moving hand often drops out for a frame or two: keep hold of the page briefly.
-      if(pinched && now - lastSeen < LOST_GRACE_MS) return;
-      letGo(); trail = []; resetWave();
+      // A fast-moving hand often drops out for a frame or two: until it has
+      // been gone a moment, change nothing (keep the page, keep the lock).
+      if(now - lastSeen < LOST_GRACE_MS){ debug = { hand:false, state:'lost (waiting)' }; return; }
+      debug = { hand:false, state:'no hand' };
+      finish(now); smoothX = smoothY = null; trail = []; resetWave();
+      lockedDir = 0;                                    // hand left the frame: both ways open again
       if(mode !== 'idle') onState(mode === 'wave' ? 'wave' : 'noHand');
       return;
     }
+    if(now - lastSeen >= LOST_GRACE_MS) appearedAt = now;   // back in view after being gone
     lastSeen = now;
-    if(mode === 'idle'){ debug = { hand:true, gap:null, state:'waiting' }; return; }
+    if(mode === 'idle'){ debug = { hand:true, state:'waiting' }; return; }
     if(mode === 'wave'){
-      debug = { hand:true, gap:null, state:`wave ${reversals.length}/2` };
+      debug = { hand:true, state:`wave ${reversals.length}/2` };
       if(trackWave(1 - landmarks[9].x, now)){ mode = 'idle'; onWave(); }
       else onState('wave');
-      return { pinched:false };
+      return { active:false };
     }
-    const size = dist(landmarks[0], landmarks[9]) || 1e-6;
-    const gap = dist(landmarks[4], landmarks[8]) / size;
+
     // Mirror x so moving your hand left moves left on screen.
-    const rawX = 1 - (landmarks[4].x + landmarks[8].x) / 2;
-    smoothX = smoothX === null ? rawX : smoothX * 0.45 + rawX * 0.55;
+    const tip = landmarks[8];
+    const x = 1 - tip.x;
+    smoothX = smoothX === null ? x : smoothX * 0.4 + x * 0.6;
+    smoothY = smoothY === null ? tip.y : smoothY * 0.4 + tip.y * 0.6;
 
-    if(!pinched && gap < PINCH_ON && !flip.isBusy()){
-      pinched = true; anchorX = smoothX; dir = 0; refused = false; trail = [];
-    } else if(pinched && gap > PINCH_OFF){
-      letGo();
+    if(dir){
+      const p = (dir > 0 ? anchorX - smoothX : smoothX - anchorX) / SWEEP_FULL;
+      surface.move(Math.max(0, p), pageY(smoothY));
+      if(Math.abs(smoothX - lastMoveX) > STILL_EPS){ lastMoveX = smoothX; lastMoveT = now; }
+      debug = { hand:true, state:`turning ${dir > 0 ? 'forward' : 'back'} ${Math.round(Math.min(1, Math.max(0, p)) * 100)}%` };
+      if(p >= 1.1 || now - lastMoveT > STILL_MS) finish(now);
+      onState('grab');
+      return { active:true };
     }
 
-    if(pinched){
-      const dx = smoothX - anchorX;
-      if(!dir && !refused && Math.abs(dx) > DRAG_START){
-        const want = dx < 0 ? 1 : -1;       // pull left = next page
-        if(flip.begin(want)) dir = want; else refused = true;
+    trail.push({ x:smoothX, t:now });
+    trail = trail.filter(s => now - s.t <= SWEEP_WINDOW);
+    const dx = smoothX - trail[0].x;
+    debug = { hand:true, state:'open hand · ready' };
+    const want = dx < 0 ? 1 : -1;                       // sweep left = next page
+    const needed = want > 0 ? SWEEP_START : SWEEP_START * BACK_SWEEP;
+    if(Math.abs(dx) > needed && now >= blockedUntil && now - appearedAt >= SETTLE_MS && !surface.busy()){
+      const startX = trail[0].x;
+      const inZone = want > 0 ? startX > 0.5 : startX < 0.4;
+      if(inZone && want !== lockedDir){
+        if(surface.begin(want, pageY(smoothY))){
+          dir = want; anchorX = startX; lastMoveX = smoothX; lastMoveT = now;
+          surface.move(Math.max(0, (want > 0 ? anchorX - smoothX : smoothX - anchorX) / SWEEP_FULL), pageY(smoothY));
+          onState('grab');
+          return { active:true };
+        }
+        blockedUntil = now + 700;                       // no page that way: don't retry every frame
+        trail = [];
+        onState('end');
+        return { active:false };
       }
-      const p = dir ? (dir > 0 ? -dx : dx) / DRAG_FULL : 0;
-      if(dir) flip.update(p);
-      debug = { hand:true, gap, state: refused ? 'pinched · no page that way'
-        : dir ? `turning ${dir > 0 ? 'forward' : 'back'} ${Math.round(Math.min(1, Math.max(0, p)) * 100)}%` : 'pinched · move sideways' };
-      onState(refused ? 'end' : 'grab');
-      return { pinched, gap };
     }
-
-    // Open hand: look for a quick horizontal sweep of the palm.
-    const palmX = 1 - landmarks[9].x;
-    trail.push({ x:palmX, t:now });
-    trail = trail.filter(s => now - s.t <= SWIPE_MS);
-    const sweep = palmX - trail[0].x;
-    debug = { hand:true, gap, state:'open hand' };
-    if(Math.abs(sweep) > SWIPE_DIST && now - lastSwipe > COOLDOWN_MS && !flip.isBusy()){
-      lastSwipe = now; trail = [];
-      onState(flip.turn(sweep < 0 ? 1 : -1) ? 'ready' : 'end');
-    } else {
-      onState('ready');
-    }
-    return { pinched, gap };
+    onState('ready');
+    return { active:false };
   }
 
   return {
     feed,
-    reset(){ letGo(); trail = []; resetWave(); },
+    reset(){ finish(performance.now()); smoothX = smoothY = null; trail = []; resetWave(); lockedDir = 0; },
     setMode(m){ mode = m; resetWave(); },
     get mode(){ return mode; },
     get debug(){ return debug; },
@@ -417,7 +508,7 @@ function setI18n(el, key){
   el.textContent = t(key);
 }
 
-function drawHand(canvas, landmarks, pinched){
+function drawHand(canvas, landmarks, active){
   const ctx = canvas.getContext('2d');
   const w = canvas.width = canvas.clientWidth * devicePixelRatio;
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
@@ -427,10 +518,10 @@ function drawHand(canvas, landmarks, pinched){
   for(const p of landmarks){
     ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
   }
-  const [a, b] = [landmarks[4], landmarks[8]];
-  ctx.strokeStyle = pinched ? '#E2B84A' : 'rgba(240,225,195,.45)';
-  ctx.lineWidth = (pinched ? 3 : 1.5) * devicePixelRatio;
-  ctx.beginPath(); ctx.moveTo(a.x * w, a.y * h); ctx.lineTo(b.x * w, b.y * h); ctx.stroke();
+  // The index fingertip is the "finger" that drags the page; it glows while turning.
+  const tip = landmarks[8];
+  ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
+  ctx.beginPath(); ctx.arc(tip.x * w, tip.y * h, (active ? 7 : 4.5) * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
 }
 
 const ui = buildUI();
@@ -445,7 +536,7 @@ let introTimer = null;
 let holdStatus = false;   // keep the "Hello!" message up while the intro plays out
 
 const gesture = createGesture({
-  flip: Flip,
+  surface: Surface,
   onState: key => {
     if(holdStatus) return;
     const k = 'hand.' + key;
@@ -477,11 +568,10 @@ function loop(){
     const result = handLandmarker.detectForVideo(v, performance.now());
     const hand = result.landmarks && result.landmarks[0] || null;
     const info = gesture.feed(hand);
-    drawHand(ui.canvas, hand, info && info.pinched);
+    drawHand(ui.canvas, hand, info && info.active);
     if(DEBUG){
       const d = gesture.debug;
-      ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · pinch ${d.gap == null ? '–' : d.gap.toFixed(2)}`
-        + ` (grab < ${PINCH_ON}, let go > ${PINCH_OFF}) · ${d.state}`;
+      ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · ${d.state}`;
     }
   }
   requestAnimationFrame(loop);
@@ -569,7 +659,7 @@ function greeted(){
     shrinkToCorner();
     introTimer = setTimeout(() => {
       holdStatus = false;
-      if(isCoverOpen()) Flip.turn(1);
+      if(isCoverOpen()) openNotebook();
       // Page-turning starts once the book is open, so a lingering wave
       // during the intro isn't read as a swipe.
       gesture.setMode('turn');
@@ -612,4 +702,4 @@ ui.btn.addEventListener('click', () => {
 });
 
 // Exposed for testing and for other controls (e.g. keyboard) to reuse.
-window.handFlip = { Flip, createGesture, gesture };
+window.handFlip = { Flip, Surface, createGesture, gesture };
