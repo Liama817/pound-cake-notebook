@@ -172,8 +172,7 @@ function mirrorHandToggle(btn){
 const originalSwitch = window.switchSection;
 window.switchSection = function(s){
   originalSwitch(s);
-  // when the book holds the Recipes chapter (history-book.js), this page isn't shown
-  document.body.classList.toggle('on-recipes', s === 'recipes' && !window.historyBook?.recipes);
+  document.body.classList.toggle('on-recipes', s === 'recipes');
 };
 document.body.classList.toggle('on-recipes',
   !!document.querySelector('.tab-btn.active[data-section="recipes"]'));

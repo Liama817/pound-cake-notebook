@@ -56,40 +56,14 @@
 
 /* The fingertip on the page while pointing at the Recipes shelf */
 .hf-cursor{
-  --close:0;   /* 0 fingers apart … 1 pinched (set from hand-flip.js) */
   position:fixed;left:0;top:0;z-index:730;pointer-events:none;
-  width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
-  border:2.5px solid #C8902E;background:rgba(255,248,230,.28);
-  box-shadow:0 0 0 1.5px rgba(255,250,238,.9), 0 3px 10px rgba(60,40,15,.4);
-  /* the ring tightens as thumb and index close in, so you can see a pinch coming */
-  scale:calc(1 - var(--close) * .45);
-  transition:scale .08s linear, background .15s ease;
+  width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;
+  border:2px solid #E2B84A;background:rgba(226,184,74,.18);
+  box-shadow:0 0 0 1px rgba(255,248,230,.7), 0 2px 8px rgba(60,40,15,.35);
+  transition:width .15s ease,height .15s ease,margin .15s ease,background .15s ease;
 }
 .hf-cursor[hidden]{display:none}
-.hf-cursor-dot{
-  position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
-  background:#C8902E;scale:calc(1 + var(--close) * 1.2);
-}
-.hf-cursor.pinch{background:#E2B84A;border-color:#fff8e6}
-
-/* A held pose: a ring fills (--p from 0 to 1) beside what will happen */
-.hf-hold{
-  --p:0;
-  position:fixed;left:50%;bottom:5.5vh;z-index:730;translate:-50% 0;pointer-events:none;
-  display:flex;align-items:center;gap:.7rem;
-  padding:.55rem 1.1rem .55rem .6rem;border-radius:999px;
-  background:rgba(28,18,8,.86);color:#F5E6C8;
-  font-family:var(--font-body),'Noto Serif SC',serif;font-size:.95rem;letter-spacing:.02em;
-  box-shadow:0 6px 20px rgba(0,0,0,.35);
-}
-.hf-hold[hidden]{display:none}
-.hf-hold-ring{
-  width:26px;height:26px;border-radius:50%;flex:none;
-  background:conic-gradient(#E2B84A calc(var(--p) * 360deg), rgba(245,230,200,.18) 0);
-  -webkit-mask:radial-gradient(circle, transparent 7px, #000 8px);
-          mask:radial-gradient(circle, transparent 7px, #000 8px);
-}
-.hf-hold.done .hf-hold-ring{-webkit-mask:none;mask:none;background:#E2B84A}
+.hf-cursor.pinch{width:16px;height:16px;margin:-8px 0 0 -8px;background:#E2B84A}
 
 /* Shading laid over a page while it turns (opacity driven from JS) */
 .hf-shade{

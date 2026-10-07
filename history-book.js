@@ -1,7 +1,6 @@
 // ── HISTORY BOOK ────────────────────────────────────────────
 // The History section as a real two-page book: a stiff cover, then one
-// spread per era (story on the left page, photograph on the right), then the
-// Recipes chapter (recipe-book.js): a fold-out shelf and a spread per recipe.
+// spread per era (story on the left page, photograph on the right).
 // Pages bend and curl as they turn, using StPageFlip (MIT, page-flip on npm).
 //
 // The book is also the landing page: closed, it is the cover; turning the
@@ -15,7 +14,6 @@
 // currentLang, openBook, switchSection, setLang, T, t.
 
 import { PageFlip } from 'https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.module.js';
-import { recipePages, attach as attachRecipes } from './recipe-book.js';
 
 Object.assign(T.en, { 'book.hint': 'Drag a page corner to turn the page' });
 Object.assign(T.zh, { 'book.hint': '拖动书页的角来翻页' });
@@ -70,12 +68,8 @@ function buildPages(){
     </div>`;
   const pages = [cover];
   ERA_KEYS.forEach((eraId, i) => pages.push(...eraPages(eraId, i * 2 + 1)));
-  pages.push(...recipePages(pages.length));
   return pages;
 }
-
-// The book's two chapters: History (from page 1) and Recipes (from here).
-const RECIPES_START = 1 + ERA_KEYS.length * 2;
 
 // ── Stage ───────────────────────────────────────────────────
 // Fixed over the page so the same book sits on the landing "table" and
@@ -97,33 +91,16 @@ const pageFlip = new PageFlip(bookEl, {
   maxShadowOpacity: 0.45,
   drawShadow: true,
   showPageCorners: true,      // corner lifts slightly under the mouse
-  mobileScrollSupport: true,  // vertical swipes scroll a long recipe; sideways ones turn
+  mobileScrollSupport: false,
   autoSize: false,            // history-book.css sizes the book to fit the screen; the
                               // library's own sizing makes it as wide as the window
 });
-const pages = buildPages();
-pageFlip.loadFromHTML(pages);
+pageFlip.loadFromHTML(buildPages());
 document.body.classList.add('hb-ready');
 
 const pageIndex = () => pageFlip.getCurrentPageIndex();
 const isClosed = () => pageIndex() === 0;
 const landscape = () => pageFlip.getOrientation() === 'landscape';
-const chapterAt = i => i >= RECIPES_START ? 'recipes' : 'history';
-
-// Highlight a chapter's tab without switching sections: both live in the book.
-function setTabs(section){
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.section === section));
-}
-// On History pages a click anywhere turns the page; Recipes pages hold
-// buttons and text to read, so there a click doesn't turn it, and the
-// corners don't curl up under the mouse as if the page were about to go.
-function syncChapter(){
-  const i = pageIndex();
-  const settings = pageFlip.getSettings();
-  settings.disableFlipByClick = chapterAt(i) === 'recipes';
-  settings.showPageCorners = !settings.disableFlipByClick;
-  if(i > 0 && !stage.classList.contains('away')) setTabs(chapterAt(i));
-}
 
 // ── Landing ⇄ open book ─────────────────────────────────────
 
@@ -139,7 +116,8 @@ function showLanding(){
 function leaveLanding(){
   if(!coverEl.classList.contains('hidden')) originalOpenBook();
   stage.classList.remove('closed');
-  syncChapter();
+  const historyTab = document.querySelector('.tab-btn[data-section="history"]');
+  if(historyTab && !historyTab.classList.contains('active')) switchSection('history');
 }
 
 // A closed book is drawn on the right half of its spread; slide it so the
@@ -151,16 +129,6 @@ pageFlip.on('changeState', e => {
 pageFlip.on('flip', e => {
   stage.classList.remove('opening');
   if(e.data === 0) showLanding(); else leaveLanding();
-  // A turn that stood in for several (recipe-book.js) settles on its real page just after this.
-  setTimeout(syncChapter, 0);
-});
-
-const recipes = attachRecipes(pageFlip, {
-  start: RECIPES_START,
-  root: bookEl,
-  pages,
-  isOpen: () => !stage.classList.contains('away') && !isClosed(),
-  onNextChapter: () => switchSection('tips'),
 });
 
 // Every way of opening the notebook (wave, Skip, keyboard) turns the cover.
@@ -170,25 +138,11 @@ function open(){
 }
 window.openBook = open;
 
-// History and Recipes are both chapters of the book. Switching to one shows
-// the book open at that chapter: riffling to it when the book is already
-// open, or opening straight there when coming from Tips.
+// Show the book only in the History section.
 const originalSwitchSection = window.switchSection;
 window.switchSection = function(s){
-  const inBook = s === 'history' || s === 'recipes';
-  const wasShowing = !stage.classList.contains('away');
-  originalSwitchSection(inBook ? 'history' : s);   // the book sits in the History panel
-  stage.classList.toggle('away', !inBook);
-  if(!inBook) return;
-  setTabs(s);
-  if(isClosed()) return;
-  const here = pageIndex();
-  // History keeps the reader's place; Recipes always opens at its shelf, the chapter's index.
-  if(s === 'history' && chapterAt(here) === 'history') return;
-  if(s === 'recipes' && recipes.where() === 'shelf') return;
-  const target = s === 'recipes' ? RECIPES_START : 1;
-  if(wasShowing) recipes.riffleTo(target);
-  else { pageFlip.turnToPage(target); syncChapter(); }
+  originalSwitchSection(s);
+  stage.classList.toggle('away', s !== 'history');
 };
 
 // Re-translate the pages when the language changes.
@@ -196,7 +150,6 @@ const originalSetLang = window.setLang;
 window.setLang = function(lang){
   originalSetLang(lang);
   bookEl.querySelectorAll('.hb-left[data-era]').forEach(fillStory);
-  recipes.refresh();
 };
 
 document.addEventListener('keydown', e => {
@@ -205,7 +158,6 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowRight'){ e.preventDefault(); pageFlip.flipNext('bottom'); }
   if(e.key === 'ArrowLeft'){ e.preventDefault(); pageFlip.flipPrev('bottom'); }
   if((e.key === 'Enter' || e.key === ' ') && isClosed() && e.target === document.body){ e.preventDefault(); open(); }
-  if(e.key === 'Escape' && recipes.where() && recipes.where() !== 'shelf') recipes.back();
 });
 
 // ── Drag API for the hand tracker ───────────────────────────
@@ -260,8 +212,7 @@ const drag = {
 };
 
 window.historyBook = {
-  pageFlip, stage, open, drag, canTurn, isClosed, recipes,
+  pageFlip, stage, open, drag, canTurn, isClosed,
   get visible(){ return !stage.classList.contains('away'); },
-  get chapter(){ return chapterAt(pageIndex()); },
-  get busy(){ return dragging || recipes.busy || pageFlip.getState() !== 'read'; },
+  get busy(){ return dragging || pageFlip.getState() !== 'read'; },
 };

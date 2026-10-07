@@ -42,8 +42,8 @@ Object.assign(T.en, {
   'hand.openInstead': 'Open the notebook instead',
   'hand.shelf': 'Point at a cake, then pinch to open it. Sweep an open hand to turn the page.',
   'hand.pointing': 'Pinch to open this cake.',
-  'hand.card': 'Pinch and drag to scroll. Hold an open palm still to go back to the shelf. Hold 👍 for baked, 🤟 for want to bake. Sweep to turn the page.',
-  'hand.hold.close': 'Keep holding to go back to the shelf…',
+  'hand.card': 'Pinch and drag to scroll. Hold an open palm to close. Hold 👍 for baked, 🤟 for want to bake.',
+  'hand.hold.close': 'Keep holding to close…',
   'hand.hold.made': 'Keep holding to mark as baked…',
   'hand.hold.wish': 'Keep holding to add to want to bake…',
   'hand.marked.made': '✓ Marked as baked.',
@@ -70,8 +70,8 @@ Object.assign(T.zh, {
   'hand.openInstead': '直接打开笔记本',
   'hand.shelf': '用食指指向一块蛋糕，捏合手指打开。张开手掌划动可以翻页。',
   'hand.pointing': '捏合手指，打开这块蛋糕。',
-  'hand.card': '捏住并上下拖动来滚动。张开手掌停住，回到橱架。比 👍 标记做过，比 🤟 加入想做。划动手掌翻页。',
-  'hand.hold.close': '保持住，即将回到橱架…',
+  'hand.card': '捏住并上下拖动来滚动。张开手掌停住，关闭食谱。比 👍 标记做过，比 🤟 加入想做。',
+  'hand.hold.close': '保持住，即将关闭…',
   'hand.hold.made': '保持住，标记为做过…',
   'hand.hold.wish': '保持住，加入想做…',
   'hand.marked.made': '✓ 已标记为做过。',
@@ -104,10 +104,7 @@ function neighbourPage(page, dir){
   // Flip only moves between the book and the other sections.
   if(window.historyBook){
     if(page.kind === 'cover') return null;
-    // History and (when the book holds it) Recipes turn inside the book; after them comes Tips.
-    if(page.kind === 'history' || (page.kind === 'recipes' && window.historyBook.recipes)){
-      return dir > 0 ? { kind: window.historyBook.recipes ? 'tips' : 'recipes' } : null;
-    }
+    if(page.kind === 'history') return dir > 0 ? { kind:'recipes' } : null;
   }
   switch(page.kind){
     case 'cover':   return dir > 0 ? { kind:'history', era:0 } : null;
@@ -154,9 +151,8 @@ const Flip = (() => {
   // unfold it the rest of the way. Dragging back below 0.5 swaps back.
   function pageFlip(dir, from, to){
     // History lives in the book's own stage when the book loaded.
-    const inBook = page => window.historyBook &&
-      (page.kind === 'history' || (page.kind === 'recipes' && window.historyBook.recipes));
-    const elFor = page => inBook(page) ? window.historyBook.stage : document.getElementById('book-spread');
+    const elFor = page => window.historyBook && page.kind === 'history'
+      ? window.historyBook.stage : document.getElementById('book-spread');
     const shade = document.createElement('div');
     shade.className = 'hf-shade';
     let el = null;
@@ -303,19 +299,10 @@ const Surface = (() => {
   let on = null;   // 'book' | 'flip' | null
   let dir = 0;
 
-  // In the book, the hand moves the page's bottom corner along the same path
-  // as the library's own turn (a mouse click): from just inside the corner,
-  // sinking slightly, to the far page's bottom edge. Held anywhere else
-  // (mid-edge, say) the leaf swings round like a tossed card.
-  const cornerV = p => 0.9 + 0.1 * Math.min(1, Math.max(0, p));
-
   function begin(d, v){
-    v = cornerV(0);
     const hb = window.historyBook;
     if(hb && hb.visible){
-      // On the Recipes shelf, cakes are chosen by pointing; a sweep forward goes on to the next chapter.
-      const onShelf = hb.recipes?.where() === 'shelf';
-      if(hb.canTurn(d) && !(onShelf && d > 0)){
+      if(hb.canTurn(d)){
         const r = hb.drag.begin(d, v);
         if(!r) return false;
         on = r === true ? 'book' : null;   // 'played': a phone-sized book just turns
@@ -334,8 +321,8 @@ const Surface = (() => {
     if(on === 'book'){
       // The corner starts at the outer edge and travels across both pages;
       // past the spine (u = 0.5) the library will finish the turn.
-      const u = dir > 0 ? 0.95 - p * 0.95 : 0.05 + p * 0.95;
-      window.historyBook.drag.move(u, cornerV(p));
+      const u = dir > 0 ? 0.97 - p * 0.94 : 0.03 + p * 0.94;
+      window.historyBook.drag.move(u, v);
     } else if(on === 'flip'){
       Flip.update(p);
     }
@@ -516,11 +503,9 @@ function createGesture({ surface, onState, onWave = () => {} }){
 
 const PINCH_ON = 0.25;      // thumb–index gap (in palm lengths) that counts as a pinch…
 const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids flicker).
-const PINCH_OPEN = 0.9;     // a gap this wide shows as a fully open cursor ring
                             // A fist's thumb rests about 0.4–0.5 from the index tip.
 const HOLD_MS = 700;        // how long a pose must be held to act
 const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
-const STILL_PALM = 0.012;   // palm travel per frame (fraction of the frame) that still counts as holding still
 const SCROLL_GAIN = 2.2;    // card scroll per unit of hand travel, in card heights
 
 const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -545,7 +530,6 @@ function createPointer(env){
   let cursor = null;          // smoothed fingertip, 0–1 across the window
   let hold = { kind:null, since:0, fired:false };
   let quietUntil = -Infinity; // no sweeps until then (just closed a card)
-  let lastPalm = null;
 
   function release(){
     pinching = false; lastPinchY = null; cursor = null;
@@ -554,12 +538,9 @@ function createPointer(env){
     env.cursor(null);
   }
 
-  // sweeping: a page turn by hand happened within the last second
-  function feed(lm, pose, now = performance.now(), { sweeping = false } = {}){
-    if(!lm){ release(); lastPalm = null; return { claimed: now < quietUntil, status:null }; }
+  function feed(lm, pose, now = performance.now()){
+    if(!lm){ release(); return { claimed: now < quietUntil, status:null }; }
     const shape = handShape(lm);
-    const palmMove = lastPalm ? Math.hypot(lm[9].x - lastPalm.x, lm[9].y - lastPalm.y) : 0;
-    lastPalm = { x:lm[9].x, y:lm[9].y };
     const wasPinching = pinching;
     pinching = pinching ? shape.pinchGap < PINCH_OFF : shape.pinchGap < PINCH_ON;
     // A pinch has no name of its own: a named pose (👍, 🤟, fist, open palm…) means it isn't one.
@@ -584,11 +565,6 @@ function createPointer(env){
                  : pose === 'ILoveYou' ? 'wish'
                  : (pose === 'Open_Palm' || (!pose && shape.open)) ? 'close'
                  : null;
-      // In the book a recipe is a page: a moving open hand turns it, only a still one goes back.
-      if(kind === 'close' && env.sweepsTurnPages() && (sweeping || palmMove > STILL_PALM)){
-        hold = { kind:null, since:now, fired:false };
-        return { claimed:false, status:null };
-      }
       if(kind !== hold.kind) hold = { kind, since:now, fired:false };
       if(!kind || hold.fired) return { claimed:true, status:'card' };
       const progress = Math.min(1, (now - hold.since) / HOLD_MS);
@@ -617,9 +593,7 @@ function createPointer(env){
     cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
     const id = env.cakeAt(cursor.u, cursor.v);
     env.point(id);
-    // how close thumb and index are to a pinch: 0 apart … 1 touching
-    const closing = clamp01((PINCH_OPEN - shape.pinchGap) / (PINCH_OPEN - PINCH_ON));
-    env.cursor(cursor, pinching, closing);
+    env.cursor(cursor, pinching);
     if(cursor.v > 0.9) env.scrollPage((cursor.v - 0.9) * 120);   // near the edge: bring more shelf into view
     if(cursor.v < 0.1) env.scrollPage((cursor.v - 0.1) * 120);
     if(pinchStarted && id){
@@ -669,18 +643,10 @@ function buildUI(){
   const cursor = document.createElement('div');
   cursor.className = 'hf-cursor';
   cursor.hidden = true;
-  cursor.innerHTML = '<span class="hf-cursor-dot"></span>';
 
-  // A held pose (open palm, 👍, 🤟): a ring that fills, and what will happen when it's full
-  const hold = document.createElement('div');
-  hold.className = 'hf-hold';
-  hold.hidden = true;
-  hold.innerHTML = '<span class="hf-hold-ring" aria-hidden="true"></span><span class="hf-hold-text"></span>';
-
-  document.body.append(backdrop, panel, btn, cursor, hold);
+  document.body.append(backdrop, panel, btn, cursor);
   return {
-    btn, sayHi, backdrop, panel, cursor, hold,
-    holdText: hold.querySelector('.hf-hold-text'),
+    btn, sayHi, backdrop, panel, cursor,
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
@@ -748,51 +714,35 @@ const gesture = createGesture({
   onWave: () => greeted(),
 });
 
-// The Recipes chapter of the book (history-book.js), when the book loaded and is showing.
-const bookRecipes = () => window.historyBook?.recipes && window.historyBook.visible ? window.historyBook.recipes : null;
-
 const pointer = createPointer({
-  // A cake being lifted (or the pages riffling to it) counts too: its recipe is about to open.
-  cardOpen(){
-    const b = bookRecipes();
-    if(b){ const w = b.where(); return b.busy || (!!w && w !== 'shelf'); }
-    return !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open;
-  },
-  shelfActive(){
-    if(isCoverOpen()) return false;
-    const b = bookRecipes();
-    if(b) return b.where() === 'shelf';
-    return !!window.recipeShelf && !!document.getElementById('recipes-panel')?.classList.contains('active');
-  },
-  sweepsTurnPages: () => !!bookRecipes(),
+  // A cake being lifted counts too: its card is about to open.
+  cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
+  shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
+    !!document.getElementById('recipes-panel')?.classList.contains('active'),
   cakeAt(u, v){
     const x = u * innerWidth, y = v * innerHeight, pad = 8;
-    const cakes = bookRecipes() ? bookRecipes().cakes() : window.recipeShelf.cakes();
-    const hit = cakes.find(el => {
+    const hit = window.recipeShelf.cakes().find(el => {
       const r = el.getBoundingClientRect();
       return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
     });
     return hit ? hit.dataset.recipe : null;
   },
-  point: id => (bookRecipes() || window.recipeShelf)?.point(id),
-  pick: id => (bookRecipes() || window.recipeShelf).pick(id),
-  cursor(c, pinching, closing = 0){
+  point: id => window.recipeShelf?.point(id),
+  pick: id => window.recipeShelf.pick(id),
+  cursor(c, pinching){
     ui.cursor.hidden = !c;
     if(!c) return;
     ui.cursor.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
-    ui.cursor.style.setProperty('--close', pinching ? 1 : closing.toFixed(2));
     ui.cursor.classList.toggle('pinch', !!pinching);
   },
   scrollCard(amount){
-    if(bookRecipes()){ bookRecipes().scrollBy(amount); return; }
     const body = document.querySelector('#recipe-modal .rm-body-scroll');
     if(body) body.scrollTop += amount * body.clientHeight;
   },
   scrollPage: dy => document.body.scrollBy(0, dy),
-  closeCard: () => bookRecipes() ? bookRecipes().back() : window.closeRecipeModal(),
-  // Toggle the recipe's stamp, as its buttons do; returns whether it is now on.
+  closeCard: () => window.closeRecipeModal(),
+  // Toggle the card's stamp, as its buttons do; returns whether it is now on.
   mark(kind){
-    if(bookRecipes()) return bookRecipes().mark(kind);
     if(kind === 'made') toggleMade(); else toggleWish();
     const s = getStampState(rmCurrentId);
     return kind === 'made' ? s.made : s.wish;
@@ -834,39 +784,15 @@ async function loadTracker(){
   }
 }
 
-// Holding a pose fills the ring on the page; when it acts, the ring says what it did.
-let holdShownUntil = 0;
-function showHold(p){
-  const status = p.status || '';
-  if(status.startsWith('hold.')){
-    ui.hold.hidden = false;
-    ui.hold.classList.remove('done');
-    ui.hold.style.setProperty('--p', p.progress.toFixed(3));
-    if(ui.holdText.dataset.i18n !== 'hand.' + status) setI18n(ui.holdText, 'hand.' + status);
-    holdShownUntil = 0;
-  } else if(p.flash && /^(un)?marked\./.test(status)){
-    ui.hold.hidden = false;
-    ui.hold.classList.add('done');
-    ui.hold.style.setProperty('--p', 1);
-    setI18n(ui.holdText, 'hand.' + status);
-    holdShownUntil = frameNow + 1400;
-  } else if(frameNow >= holdShownUntil){
-    ui.hold.hidden = true;
-  }
-}
-
 // One video frame: the Pointer looks first (it may hold sweeps back), then the sweep detector.
-let lastSweepAt = -Infinity;
 function handleFrame(hand, pose, now = performance.now()){
   frameNow = now;
   let p = { claimed:false, status:null };
-  if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now, { sweeping: now - lastSweepAt < 1000 });
+  if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now);
   else pointer.release();
   pointerStatus = p.status;
   const info = gesture.feed(hand, now, !p.claimed);
-  if(info && info.active) lastSweepAt = now;
   if(p.flash) flashUntil = now + 1600;
-  showHold(p);
   if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
@@ -933,8 +859,6 @@ function stopCamera(){
 function stop(){
   endIntro();
   stopCamera();
-  pointer.release();
-  ui.hold.hidden = true;
   gesture.setMode('turn');
   ui.panel.classList.remove('open');
   ui.btn.setAttribute('aria-pressed', 'false');
