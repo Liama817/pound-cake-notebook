@@ -125,8 +125,9 @@ function buildShelf(){
         </div>
       </div>`;
   }
+  // on wider screens the shelf is laid out on an open book like History's (book-frame.css)
   panel.innerHTML = `
-    <div class="shelf-wrap">
+    <div class="bk-spread"><div class="shelf-wrap">
       <header class="shelf-head">
         <h1 class="shelf-title" data-i18n="recipes.title">${t('recipes.title')}</h1>
         <div class="head-note">
@@ -140,7 +141,7 @@ function buildShelf(){
         <button class="foot-hand" type="button" hidden></button>
         <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span>${ARROW_R}</span></button>
       </nav>
-    </div>`;
+    </div></div>`;
   panel.querySelectorAll('.slice').forEach(btn => {
     btn.addEventListener('click', () => pick(btn.dataset.recipe));
   });
