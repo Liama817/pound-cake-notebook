@@ -15,15 +15,11 @@ Object.assign(T.en, {
   'shelf.count': '{n} cakes on the shelf',
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
-  'shelf.next': 'Next chapter',
-  'shelf.prev': 'Previous chapter',
 });
 Object.assign(T.zh, {
   'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
-  'shelf.next': '下一章',
-  'shelf.prev': '上一章',
 });
 
 const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
@@ -53,11 +49,6 @@ const SCENE = {
   blueberry:    { x:40.309, y:46.801, w:18.452, h:13.691, tx:9.137, ty:13.928 },
   chocZucchini: { x:67.096, y:46.801, w:18.452, h:13.691, tx:9.018, ty:13.928 },
 };
-
-// A pencil-drawn arrow for the chapter links.
-const ARROW = '<path d="M2 9.6c9-.9 22-.3 33 .3M27.5 3.5c2.6 2.4 5.2 4.6 8 6.5-2.9 1.6-5.8 3.6-8.3 6.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>';
-const ARROW_R = `<svg class="arrow" viewBox="0 0 38 20" aria-hidden="true">${ARROW}</svg>`;
-const ARROW_L = `<svg class="arrow flip" viewBox="0 0 38 20" aria-hidden="true">${ARROW}</svg>`;
 
 function tagHTML(id, r, i){
   const name = t('recipe.' + id) || r.name;
@@ -137,16 +128,11 @@ function buildShelf(){
       </header>
       <div class="shelf">${rows}</div>
       <nav class="shelf-foot">
-        <button class="foot-prev" type="button" data-go="history"><small data-i18n="shelf.prev">${t('shelf.prev')}</small><span>${ARROW_L}<span data-i18n="nav.history">${t('nav.history')}</span></span></button>
         <button class="foot-hand" type="button" hidden></button>
-        <button class="foot-next" type="button" data-go="tips"><small data-i18n="shelf.next">${t('shelf.next')}</small><span><span data-i18n="nav.tips">${t('nav.tips')}</span>${ARROW_R}</span></button>
       </nav>
     </div></div>`;
   panel.querySelectorAll('.slice').forEach(btn => {
     btn.addEventListener('click', () => pick(btn.dataset.recipe));
-  });
-  panel.querySelectorAll('[data-go]').forEach(btn => {
-    btn.addEventListener('click', () => switchSection(btn.dataset.go));
   });
   mirrorHandToggle(panel.querySelector('.foot-hand'));
 }

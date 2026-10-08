@@ -121,6 +121,8 @@ body.hf-intro .hf-toggle{visibility:hidden}
   font-size:1.25rem;text-align:center;margin:.9rem .4rem .3rem;
 }
 .hf-panel.hero .hf-privacy{text-align:center}
+/* said on the front page and when the camera first opens; the small corner window leaves it out */
+.hf-panel:not(.hero) .hf-privacy{display:none}
 .hf-panel.greeted{border-color:rgba(226,184,74,.85);box-shadow:0 0 0 1px rgba(226,184,74,.4),0 18px 60px rgba(0,0,0,.6)}
 .hf-panel.greeted .hf-status{color:#E2B84A}
 

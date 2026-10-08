@@ -33,7 +33,7 @@ body.fp-showing .hf-sayhi{visibility:hidden}
   color:#E2B84A;
 }
 .fp-note{
-  margin:2rem 0 0;max-width:30em;
+  margin:2rem 0 0;max-width:36em;
   font-family:var(--font-body),'Noto Serif SC',serif;font-size:1.1rem;line-height:1.5;color:rgba(240,225,195,.78);
 }
 .fp-start{

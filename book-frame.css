@@ -70,10 +70,6 @@
     background:radial-gradient(ellipse 50% 50% at center, rgba(80,55,25,.34), rgba(80,55,25,.12) 55%, rgba(80,55,25,0) 100%);
   }
   #recipes-panel .bk-spread .shelf-foot{padding-top:1cqw}
-  #recipes-panel .bk-spread .foot-prev small,
-  #recipes-panel .bk-spread .foot-next small{font-size:.95cqw}
-  #recipes-panel .bk-spread .foot-prev > span,
-  #recipes-panel .bk-spread .foot-next > span{font-size:2.3cqw}
   #recipes-panel .bk-spread .shelf-foot .foot-hand{font-size:1.3cqw}
 
   /* ── Tips on the spread: the batter tool on the left page, storage on the right ── */

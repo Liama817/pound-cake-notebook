@@ -13,7 +13,7 @@
 Object.assign(T.en, {
   'front.title': 'The Pound Cake Notebook',
   'front.by': 'by Lia',
-  'front.note': 'Uses your camera, so you can turn the pages by hand.',
+  'front.note': 'Uses your camera, so you can turn the pages by hand. Video stays on your device.',
   'front.start': 'Start',
   'front.wave': 'open the notebook',
   'front.sweep': 'turn a page',
@@ -27,7 +27,7 @@ Object.assign(T.en, {
 Object.assign(T.zh, {
   'front.title': '磅蛋糕笔记',
   'front.by': 'by Lia',
-  'front.note': '会使用你的摄像头，让你用手翻页。',
+  'front.note': '会使用你的摄像头，让你用手翻页。视频只在你的设备上处理。',
   'front.start': '开始',
   'front.wave': '打开笔记本',
   'front.sweep': '翻一页',
