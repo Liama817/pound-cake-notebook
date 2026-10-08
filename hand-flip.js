@@ -36,7 +36,16 @@ Object.assign(T.en, {
   'hand.error': 'Hand tracking could not start on this device.',
   'hand.privacy': 'Video stays on your device.',
   'hand.sayHi': '👋 Say hi to open',
-  'hand.wave': 'Wave hello to open the notebook.',
+  'hand.orClick': 'or click the cover',
+  'hand.invite': 'Wave hello to open your notebook.',
+  'hand.inviteWhy': 'The notebook uses your camera to see your hand. Video stays on your device: nothing is recorded or sent.',
+  'hand.allow': 'Turn on camera',
+  'hand.clickInstead': 'Open with a click instead',
+  'hand.wave': 'Wave hello 👋',
+  'hand.waveHint': 'Wave your whole hand, side to side.',
+  'hand.deniedHelp': 'The camera is blocked. To allow it, click the camera icon in the address bar, choose Allow, and try again.',
+  'hand.noCamera': 'No camera was found on this device.',
+  'hand.tryAgain': 'Try again',
   'hand.hello': 'Hello! Opening your notebook…',
   'hand.skip': 'Skip',
   'hand.openInstead': 'Open the notebook instead',
@@ -64,7 +73,16 @@ Object.assign(T.zh, {
   'hand.error': '此设备无法启动手势识别。',
   'hand.privacy': '视频只在你的设备上处理。',
   'hand.sayHi': '👋 挥手打开',
-  'hand.wave': '向镜头挥挥手，打开笔记本。',
+  'hand.orClick': '或点击封面打开',
+  'hand.invite': '挥挥手，打开你的笔记本。',
+  'hand.inviteWhy': '笔记本会用摄像头看你的手。视频只在你的设备上处理，不会录制或上传。',
+  'hand.allow': '打开摄像头',
+  'hand.clickInstead': '直接点击打开',
+  'hand.wave': '挥挥手 👋',
+  'hand.waveHint': '张开整只手，左右挥动。',
+  'hand.deniedHelp': '摄像头被拦截了。请点击地址栏里的摄像头图标，选择“允许”，再试一次。',
+  'hand.noCamera': '这台设备上没有找到摄像头。',
+  'hand.tryAgain': '再试一次',
   'hand.hello': '你好！正在为你打开笔记本…',
   'hand.skip': '跳过',
   'hand.openInstead': '直接打开笔记本',
@@ -622,7 +640,11 @@ function buildUI(){
   sayHi.type = 'button';
   sayHi.dataset.i18n = 'hand.sayHi';
   sayHi.textContent = t('hand.sayHi');
-  document.getElementById('cover').appendChild(sayHi);
+  const orClick = document.createElement('p');
+  orClick.className = 'hf-orclick';
+  orClick.dataset.i18n = 'hand.orClick';
+  orClick.textContent = t('hand.orClick');
+  document.getElementById('cover').append(sayHi, orClick);
 
   const backdrop = document.createElement('div');
   backdrop.className = 'hf-backdrop';
@@ -630,12 +652,13 @@ function buildUI(){
   const panel = document.createElement('div');
   panel.className = 'hf-panel';
   panel.innerHTML = `
-    <div class="hf-stage">
+    <div class="hf-stage-wrap"><div class="hf-stage">
       <video playsinline muted></video>
       <canvas></canvas>
-    </div>
+    </div></div>
     <p class="hf-status" role="status" aria-live="polite"></p>
     <p class="hf-privacy" data-i18n="hand.privacy">${t('hand.privacy')}</p>
+    <button class="hf-allow" type="button" data-i18n="hand.allow">${t('hand.allow')}</button>
     <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
@@ -651,6 +674,8 @@ function buildUI(){
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
     skip: panel.querySelector('.hf-skip'),
+    allow: panel.querySelector('.hf-allow'),
+    privacy: panel.querySelector('.hf-privacy'),
     debug: panel.querySelector('.hf-debug'),
   };
 }
@@ -709,6 +734,7 @@ const gesture = createGesture({
   onState: key => {
     if(holdStatus || frameNow < flashUntil) return;
     if(pointerStatus && key !== 'grab') return;
+    if(key === 'wave' && waveHinted) key = 'waveHint';   // no wave for a while: say how
     say(key);
   },
   onWave: () => greeted(),
@@ -837,8 +863,9 @@ async function start(){
   } catch(err){
     console.warn('[hand-flip]', err);
     const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
-    setI18n(ui.status, denied ? 'hand.denied' : 'hand.error');
-    setI18n(ui.skip, 'hand.openInstead');
+    const noCamera = err && (err.name === 'NotFoundError' || err.name === 'OverconstrainedError');
+    setI18n(ui.status, denied ? (introActive ? 'hand.deniedHelp' : 'hand.denied') : noCamera ? 'hand.noCamera' : 'hand.error');
+    setI18n(ui.skip, introActive ? 'hand.clickInstead' : 'hand.openInstead');
     stopCamera();
     ui.btn.setAttribute('aria-pressed', 'false');
     setI18n(ui.btn, 'hand.toggle');
@@ -866,53 +893,142 @@ function stop(){
 }
 
 // ── WELCOME INTRO ───────────────────────────────────────────
-// "Say hi" on the cover → big mirror → wave → the mirror shrinks into the
-// corner → the cover rests for 1 s → it opens onto the first history page.
+// One object changes shape the whole way, and the book stays in view:
+//   "Say hi" under the cover → the button grows into a card beside the cover
+//   (the book slides over to make room) that says why the camera is needed →
+//   "Turn on camera" → the card grows into the mirror → a wave → "Hello!",
+//   and in one movement the mirror glides to its corner while the cover opens
+//   and the book slides back to the middle.
+// Where there's no room beside the cover (narrow screens), the card and the
+// mirror sit in the middle over the dimmed cover instead.
+// The hand-tracking model starts loading as soon as the card appears.
 
-const COVER_PAUSE_MS = 1000;
+const HELLO_MS = 450;        // the "Hello!" glow before everything moves
+const WAVE_HINT_MS = 8000;   // no wave by then: show how
+const SIDE_GAP = 48;         // between the cover and the card beside it
+let introActive = false;
+let waveHintTimer = 0;
+let waveHinted = false;
+
+// Put the card beside the cover, sliding the closed book over to make room.
+// Returns false when the window is too narrow for that.
+function placeBeside(){
+  const book = window.historyBook?.stage?.querySelector('.hb-book');
+  if(!book || !window.historyBook.isClosed()) return false;
+  const r = book.getBoundingClientRect();   // the closed cover is this box's right half
+  const coverW = r.width / 2;
+  const cardW = Math.min(380, Math.max(300, innerWidth * 0.28));
+  if(coverW + SIDE_GAP + cardW > innerWidth - 64) return false;
+  const shift = (SIDE_GAP + cardW) / 2;
+  document.body.style.setProperty('--hf-shift', `${shift}px`);
+  document.body.classList.add('hf-side');
+  const coverLeft = innerWidth / 2 - coverW / 2 - shift;
+  Object.assign(ui.panel.style, { left:`${coverLeft + coverW + SIDE_GAP}px`, width:`${cardW}px` });
+  ui.panel.dataset.coverMid = r.top + r.height / 2;
+  return true;
+}
+// Keep the card centred on the cover's height as it grows into the mirror.
+function centreBeside(){
+  if(!ui.panel.classList.contains('side')) return;
+  const mid = +ui.panel.dataset.coverMid;
+  ui.panel.style.top = `${Math.max(16, mid - ui.panel.offsetHeight / 2)}px`;
+}
+
+// The button grows into the card: the card starts at the button's box and opens out from it.
+function growFrom(el){
+  if(reducedMotion()) return;
+  const from = el.getBoundingClientRect(), to = ui.panel.getBoundingClientRect();
+  ui.panel.style.transformOrigin = 'top left';
+  ui.panel.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
+  ui.panel.style.opacity = '0';
+  ui.panel.getBoundingClientRect();
+  ui.panel.style.transition = 'transform .5s cubic-bezier(.2,.75,.2,1), opacity .25s ease';
+  ui.panel.style.transform = '';
+  ui.panel.style.opacity = '';
+  ui.panel.addEventListener('transitionend', () => { ui.panel.style.transition = ui.panel.style.transformOrigin = ''; }, { once:true });
+}
 
 function startIntro(){
-  setI18n(ui.skip, 'hand.skip');
+  introActive = true;
   gesture.setMode('wave');
   document.body.classList.add('hf-intro');
-  ui.panel.classList.add('hero');
-  ui.backdrop.classList.add('open');
-  start();   // on failure the hero stays up showing why, with Skip to carry on
+  setI18n(ui.status, 'hand.invite');
+  setI18n(ui.privacy, 'hand.inviteWhy');
+  setI18n(ui.skip, 'hand.clickInstead');
+  setI18n(ui.allow, 'hand.allow');
+  ui.panel.classList.add('open', 'asking');
+  if(placeBeside()) ui.panel.classList.add('side');
+  else { ui.panel.classList.add('hero'); ui.backdrop.classList.add('open'); }
+  centreBeside();
+  growFrom(ui.sayHi);
+  ui.allow.focus({ preventScroll:true });
+  // fetch the model while the card is being read, so the mirror is ready sooner
+  if(!tracker) loadTracker().then(tr => { tracker = tracker || tr; }).catch(() => {});
 }
 
-// Leave the big-mirror state. No-op if we're not in it.
+// "Turn on camera": the browser asks now, when the reader expects it.
+async function allowCamera(){
+  ui.panel.classList.remove('asking', 'failed');
+  setI18n(ui.privacy, 'hand.privacy');
+  centreBeside();
+  const ok = await start();
+  if(!introActive) return;
+  if(!ok){
+    // stay in the card: say what went wrong, and offer to try again (after allowing the camera)
+    ui.panel.classList.add('open', 'failed');
+    setI18n(ui.allow, 'hand.tryAgain');
+    centreBeside();
+    return;
+  }
+  setI18n(ui.status, 'hand.wave');
+  centreBeside();
+  clearTimeout(waveHintTimer);
+  waveHinted = false;
+  waveHintTimer = setTimeout(() => { waveHinted = true; }, WAVE_HINT_MS);
+}
+
+// Leave the intro without opening anything (Escape, Stop). No-op outside it.
 function endIntro(){
   clearTimeout(introTimer);
+  clearTimeout(waveHintTimer);
+  introActive = waveHinted = false;
   holdStatus = false;
   ui.backdrop.classList.remove('open');
-  document.body.classList.remove('hf-intro');
-  ui.panel.classList.remove('hero', 'greeted');
+  document.body.classList.remove('hf-intro', 'hf-side');
+  ui.panel.classList.remove('hero', 'side', 'asking', 'failed', 'greeted');
+  ui.panel.style.left = ui.panel.style.top = ui.panel.style.width = '';
+  setI18n(ui.privacy, 'hand.privacy');
 }
 
+// A wave: "Hello!", then in one movement the mirror goes to its corner and the cover opens.
 function greeted(){
+  clearTimeout(waveHintTimer);
   setI18n(ui.status, 'hand.hello');
   holdStatus = true;
   ui.panel.classList.add('greeted');
   introTimer = setTimeout(() => {
     shrinkToCorner();
+    if(isCoverOpen()) openNotebook();
+    introActive = false;
     introTimer = setTimeout(() => {
       holdStatus = false;
-      if(isCoverOpen()) openNotebook();
+      document.body.classList.remove('hf-intro');   // "Say hi" stays hidden until the cover has gone
       // Page-turning starts once the book is open, so a lingering wave
       // during the intro isn't read as a swipe.
       gesture.setMode('turn');
-    }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
-  }, 700);
+    }, 1300);
+  }, reducedMotion() ? 0 : HELLO_MS);
 }
 
-// FLIP technique: measure the big mirror, snap it to its corner size,
+// FLIP technique: measure the mirror where it is, put it in its corner,
 // then animate from the old box to the new one with a single transform.
 function shrinkToCorner(){
   const panel = ui.panel;
   const first = panel.getBoundingClientRect();
   ui.backdrop.classList.remove('open');
-  document.body.classList.remove('hf-intro');
-  panel.classList.remove('hero', 'greeted');
+  document.body.classList.remove('hf-side');   // the book slides back to the middle as it opens
+  panel.classList.remove('hero', 'side', 'greeted');
+  panel.style.left = panel.style.top = panel.style.width = '';
   if(reducedMotion()) return;
   const last = panel.getBoundingClientRect();
   panel.style.transformOrigin = 'top left';
@@ -926,13 +1042,29 @@ function shrinkToCorner(){
   }, { once:true });
 }
 
+ui.allow.addEventListener('click', allowCamera);
+
+// Opened another way during the intro (a click on the cover, the keyboard):
+// with the camera on, carry on in hand mode; before it, just put the card away.
+window.historyBook?.pageFlip.on('flip', () => {
+  if(!introActive || isCoverOpen()) return;
+  if(running){
+    introActive = holdStatus = false;
+    clearTimeout(waveHintTimer);
+    shrinkToCorner();
+    document.body.classList.remove('hf-intro');
+    gesture.setMode('turn');
+  }
+  else stop();
+});
+
 ui.sayHi.addEventListener('click', startIntro);
 
-// Skip: put the camera away and open the notebook the ordinary way.
+// "Open with a click instead": put the camera away and open the notebook the ordinary way.
 ui.skip.addEventListener('click', () => { stop(); openBook(); });
 
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' && ui.panel.classList.contains('hero')) stop();
+  if(e.key === 'Escape' && introActive) stop();
 });
 
 ui.btn.addEventListener('click', () => {
