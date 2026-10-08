@@ -11,9 +11,10 @@
     radial-gradient(ellipse at 80% 100%,rgba(60,36,14,.35) 0%,transparent 55%);
   color:#F5ECD7;
   transition:opacity .6s ease;
-  /* a slice of pound cake for a pointer; its top-left corner is the tip */
-  cursor:url("./images/cursor/slice.png") 1 1, auto;
-  cursor:-webkit-image-set(url("./images/cursor/slice.png") 1x, url("./images/cursor/slice@2x.png") 2x) 1 1, auto;
+  /* the orange pound cake from the Recipes shelf, on its plate, for a pointer;
+     it points from the middle of the cake */
+  cursor:url("./images/cursor/cake.png") 30 20, auto;
+  cursor:-webkit-image-set(url("./images/cursor/cake.png") 1x, url("./images/cursor/cake@2x.png") 2x) 30 20, auto;
 }
 .fp button{cursor:inherit}
 .fp.leaving{opacity:0;pointer-events:none}
