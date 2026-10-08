@@ -213,6 +213,20 @@ body{
 .book-header-nav{
   display:flex;gap:2rem;font-style:normal;
 }
+/* Back to the cover: the notebook's name, with an arrow */
+.book-home{
+  display:inline-flex;align-items:center;gap:.6rem;
+  border:0;background:none;padding:.3rem .1rem;margin:0;cursor:pointer;
+  font:inherit;letter-spacing:inherit;color:inherit;text-align:left;
+  transition:color .2s ease;
+}
+.book-home-arrow{
+  font-style:normal;font-size:1.05rem;line-height:1;color:var(--accent-gold);
+  transition:translate .25s ease;
+}
+.book-home:hover{color:oklch(88% 0.04 75)}
+.book-home:hover .book-home-arrow{translate:-4px 0}
+.book-home:focus-visible{outline:2px solid var(--accent-gold);outline-offset:3px;border-radius:2px}
 .lang-toggle{
   font-family:var(--font-body);font-size:.6rem;
   letter-spacing:.1em;background:none;border:none;
@@ -2838,7 +2852,11 @@ body{
 <div id="book">
   <div class="book-wrap">
     <div class="book-header">
-      <span data-i18n="cover.subtitle">The Pound Cake Notebook &nbsp;·&nbsp; A Baker's Companion</span>
+      <!-- the notebook's name doubles as the way back to its cover (history-book.js) -->
+      <button class="book-home" id="book-home" onclick="goToCover()" title="Back to the cover" aria-label="Back to the cover">
+        <span class="book-home-arrow" aria-hidden="true">←</span>
+        <span data-i18n="cover.subtitle">The Pound Cake Notebook &nbsp;·&nbsp; A Baker's Companion</span>
+      </button>
       <nav class="book-header-nav">
         <button class="tab-btn active" data-section="history" data-i18n="nav.history" onclick="switchSection('history')">History</button>
         <button class="tab-btn" data-section="recipes" data-i18n="nav.recipes" onclick="switchSection('recipes')">Recipes</button>

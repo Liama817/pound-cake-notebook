@@ -15,8 +15,8 @@
 
 import { PageFlip } from 'https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.module.js';
 
-Object.assign(T.en, { 'book.hint': 'Drag a page corner to turn the page' });
-Object.assign(T.zh, { 'book.hint': '拖动书页的角来翻页' });
+Object.assign(T.en, { 'book.hint': 'Drag a page corner to turn the page', 'book.toCover': 'Back to the cover' });
+Object.assign(T.zh, { 'book.hint': '拖动书页的角来翻页', 'book.toCover': '回到封面' });
 
 const PAGE_W = 460, PAGE_H = 620;   // proportions of one page; the book scales to fit
 
@@ -138,6 +138,22 @@ function open(){
 }
 window.openBook = open;
 
+// The notebook's name in the header closes the book again: from Recipes or
+// Tips it first slides back to the History book, then the pages turn back
+// onto the cover, just as turning them back by hand would.
+function toCover(){
+  if(isClosed()) return;
+  const close = () => { if(pageFlip.getState() === 'read') pageFlip.flip(0, 'bottom'); };
+  if(stage.classList.contains('away')){ switchSection('history'); setTimeout(close, 550); }
+  else close();
+}
+window.goToCover = toCover;
+function labelHomeButton(){
+  const b = document.getElementById('book-home');
+  if(b){ b.title = t('book.toCover'); b.setAttribute('aria-label', t('book.toCover')); }
+}
+labelHomeButton();
+
 // Show the book only in the History section.
 const originalSwitchSection = window.switchSection;
 window.switchSection = function(s){
@@ -150,6 +166,7 @@ const originalSetLang = window.setLang;
 window.setLang = function(lang){
   originalSetLang(lang);
   bookEl.querySelectorAll('.hb-left[data-era]').forEach(fillStory);
+  labelHomeButton();
 };
 
 document.addEventListener('keydown', e => {
@@ -212,7 +229,7 @@ const drag = {
 };
 
 window.historyBook = {
-  pageFlip, stage, open, drag, canTurn, isClosed,
+  pageFlip, stage, open, toCover, drag, canTurn, isClosed,
   get visible(){ return !stage.classList.contains('away'); },
   get busy(){ return dragging || pageFlip.getState() !== 'read'; },
 };
