@@ -43,10 +43,10 @@
     content:'';position:absolute;inset:0;z-index:3;pointer-events:none;
     background:linear-gradient(to right,
       transparent calc(50% - 5.5cqw),
-      rgba(70,45,15,.10) calc(50% - 2.2cqw),
-      rgba(70,45,15,.30) calc(50% - .15cqw),
-      rgba(70,45,15,.30) calc(50% + .15cqw),
-      rgba(70,45,15,.10) calc(50% + 2.2cqw),
+      rgba(70,45,15,var(--spine-soft, .10)) calc(50% - 2.2cqw),
+      rgba(70,45,15,var(--spine-deep, .30)) calc(50% - .15cqw),
+      rgba(70,45,15,var(--spine-deep, .30)) calc(50% + .15cqw),
+      rgba(70,45,15,var(--spine-soft, .10)) calc(50% + 2.2cqw),
       transparent calc(50% + 5.5cqw));
     mix-blend-mode:multiply;
   }
@@ -54,6 +54,7 @@
   /* ── Recipes on the spread ── */
   #recipes-panel .bk-spread{
     --ink:#2E2418;--ink-soft:#5E4E3B;--ochre:#A0622A;--rule:rgba(94,78,59,.28);
+    --spine-soft:.035;--spine-deep:.11;   /* the fold crosses the cabinet here, so keep it faint */
   }
   #recipes-panel .bk-spread .shelf-wrap{
     max-width:none;height:100%;margin:0;
