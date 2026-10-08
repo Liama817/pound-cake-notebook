@@ -11,7 +11,7 @@
 //   4. Gesture — turns hand landmarks into a sweep (or a hello wave).
 //   5. Pointer — on the Recipes shelf and its recipe card: point to choose a
 //                cake, pinch to open it, pinch and drag to scroll the card,
-//                hold an open palm to close it, hold 👍 / 🤟 to mark it.
+//                hold an open palm to close it, hold 👍 / make a 🫶 heart to mark it.
 // The camera code at the bottom feeds each frame to Pointer, then Gesture.
 //
 // Relies on globals from index.html: openBook, switchSection, buildHistSlideshow,
@@ -42,10 +42,10 @@ Object.assign(T.en, {
   'hand.openInstead': 'Open the notebook instead',
   'hand.shelf': 'Point at a cake, then pinch to open it. Sweep an open hand to turn the page.',
   'hand.pointing': 'Pinch to open this cake.',
-  'hand.card': 'Pinch and drag to scroll. Hold an open palm to close. Hold 👍 for baked, 🤟 for want to bake.',
+  'hand.card': 'Pinch and drag to scroll. Hold an open palm to close. Hold 👍 for baked, a 🫶 heart for want to bake.',
   'hand.hold.close': 'Keep holding to close…',
   'hand.hold.made': 'Keep holding to mark as baked…',
-  'hand.hold.wish': 'Keep holding to add to want to bake…',
+  'hand.hold.wish': 'Keep holding the heart to add to want to bake…',
   'hand.marked.made': '✓ Marked as baked.',
   'hand.unmarked.made': 'Baked mark removed.',
   'hand.marked.wish': '♡ Added to want to bake.',
@@ -70,10 +70,10 @@ Object.assign(T.zh, {
   'hand.openInstead': '直接打开笔记本',
   'hand.shelf': '用食指指向一块蛋糕，捏合手指打开。张开手掌划动可以翻页。',
   'hand.pointing': '捏合手指，打开这块蛋糕。',
-  'hand.card': '捏住并上下拖动来滚动。张开手掌停住，关闭食谱。比 👍 标记做过，比 🤟 加入想做。',
+  'hand.card': '捏住并上下拖动来滚动。张开手掌停住，关闭食谱。比 👍 标记做过，比 🫶 爱心加入想做。',
   'hand.hold.close': '保持住，即将关闭…',
   'hand.hold.made': '保持住，标记为做过…',
-  'hand.hold.wish': '保持住，加入想做…',
+  'hand.hold.wish': '保持爱心，加入想做…',
   'hand.marked.made': '✓ 已标记为做过。',
   'hand.unmarked.made': '已取消“做过”。',
   'hand.marked.wish': '♡ 已加入想做。',
@@ -500,7 +500,8 @@ function createGesture({ surface, onState, onWave = () => {} }){
 //   cursor follows the fingertip; the cake under it lifts. Pinch (thumb tip
 //   to index tip) to open that cake's recipe.
 //   On the card: pinch and drag up or down to scroll it. Hold an open palm
-//   to close it, hold 👍 to mark it baked, hold 🤟 to add it to want-to-bake.
+//   to close it, hold 👍 to mark it baked, make a heart with both hands 🫶
+//   to add it to want-to-bake (the tracker follows two hands while a card is open).
 // While the hand points or pinches, sweeps are held back so choosing a cake
 // can't turn the chapter. `env` connects it to the page (see the camera code).
 //
@@ -531,6 +532,17 @@ function handShape(lm){
   };
 }
 
+// Two hands making a heart 🫶: thumb tips touching at the bottom, index
+// fingertips touching above them, the hands apart (it isn't one hand seen twice).
+function isHeart(a, b){
+  const palm = (dist2d(a[0], a[9]) + dist2d(b[0], b[9])) / 2 || 1e-6;
+  const thumbs = dist2d(a[4], b[4]) / palm;
+  const tips = dist2d(a[8], b[8]) / palm;
+  const rise = ((a[4].y + b[4].y) - (a[8].y + b[8].y)) / 2 / palm;   // image y grows downward
+  const apart = dist2d(a[0], b[0]) / palm;
+  return thumbs < 0.7 && tips < 0.7 && rise > 0.45 && apart > 0.9;
+}
+
 function createPointer(env){
   let pinching = false;
   let lastPinchY = null;
@@ -545,13 +557,15 @@ function createPointer(env){
     env.cursor(null);
   }
 
-  function feed(lm, pose, now = performance.now()){
+  // hands: every hand in view (two only while a card is open)
+  function feed(lm, pose, now = performance.now(), hands = lm ? [lm] : []){
     if(!lm){ release(); return { claimed: now < quietUntil, status:null }; }
     const shape = handShape(lm);
+    const heart = hands.length >= 2 && isHeart(hands[0], hands[1]);
     const wasPinching = pinching;
     pinching = pinching ? shape.pinchGap < PINCH_OFF : shape.pinchGap < PINCH_ON;
     // A pinch has no name of its own: a named pose (👍, 🤟, fist, open palm…) means it isn't one.
-    if(pose && pose !== 'Pointing_Up') pinching = false;
+    if((pose && pose !== 'Pointing_Up') || heart) pinching = false;
     const pinchStarted = pinching && !wasPinching;
     // Pinch point: halfway between thumb and index tips. Mirror x like a mirror.
     const tip = pinching
@@ -568,8 +582,8 @@ function createPointer(env){
         return { claimed:true, status:'card' };
       }
       lastPinchY = null;
-      const kind = pose === 'Thumb_Up' ? 'made'
-                 : pose === 'ILoveYou' ? 'wish'
+      const kind = heart ? 'wish'
+                 : pose === 'Thumb_Up' ? 'made'
                  : (pose === 'Open_Palm' || (!pose && shape.open)) ? 'close'
                  : null;
       if(kind !== hold.kind) hold = { kind, since:now, fired:false };
@@ -721,7 +735,7 @@ const gesture = createGesture({
   onWave: () => greeted(),
 });
 
-const pointer = createPointer({
+const pointerEnv = {
   // A cake being lifted counts too: its card is about to open.
   cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
   shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
@@ -754,7 +768,8 @@ const pointer = createPointer({
     const s = getStampState(rmCurrentId);
     return kind === 'made' ? s.made : s.wish;
   },
-});
+};
+const pointer = createPointer(pointerEnv);
 
 // Gesture Recognizer gives the same 21 hand points as Hand Landmarker plus a
 // named pose (👍, 🤟, open palm…). If it can't load, fall back to the plain
@@ -767,6 +782,11 @@ async function loadTracker(){
     try { return await Task.createFromOptions(fileset, options('GPU')); }
     catch(err){ return Task.createFromOptions(fileset, options('CPU')); }
   };
+  // How many hands to follow; changed only when it differs (it reconfigures the task).
+  const handCount = task => {
+    let n = 1;
+    return want => { if(want === n || !task.setOptions) return; n = want; task.setOptions({ numHands:want }); };
+  };
   try {
     const recognizer = await create(GestureRecognizer, GESTURE_MODEL_URL);
     return {
@@ -775,9 +795,11 @@ async function loadTracker(){
         const top = r.gestures && r.gestures[0] && r.gestures[0][0];
         return {
           hand: r.landmarks && r.landmarks[0] || null,
+          hands: r.landmarks || [],
           pose: top && top.score > 0.6 && top.categoryName !== 'None' ? top.categoryName : null,
         };
       },
+      setHands: handCount(recognizer),
     };
   } catch(err){
     console.warn('[hand-flip] gesture recognizer unavailable, using hand landmarks only', err);
@@ -785,22 +807,26 @@ async function loadTracker(){
     return {
       run(video, time){
         const r = landmarker.detectForVideo(video, time);
-        return { hand: r.landmarks && r.landmarks[0] || null, pose: null };
+        return { hand: r.landmarks && r.landmarks[0] || null, hands: r.landmarks || [], pose: null };
       },
+      setHands: handCount(landmarker),
     };
   }
 }
 
 // One video frame: the Pointer looks first (it may hold sweeps back), then the sweep detector.
-function handleFrame(hand, pose, now = performance.now()){
+function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] : []){
   frameNow = now;
   let p = { claimed:false, status:null };
-  if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now);
+  if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now, hands);
   else pointer.release();
   pointerStatus = p.status;
   const info = gesture.feed(hand, now, !p.claimed);
   if(p.flash) flashUntil = now + 1600;
   if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
+  // a held gesture also shows big on the card itself (cake-card.js)
+  const holding = pointerStatus && pointerStatus.startsWith('hold.') ? pointerStatus.slice(5) : null;
+  window.cakeCard?.hold(holding, p.progress || 0);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
 
@@ -810,8 +836,10 @@ function loop(){
   if(v.readyState >= 2 && v.currentTime !== lastVideoTime){
     lastVideoTime = v.currentTime;
     const now = performance.now();
-    const { hand, pose } = tracker.run(v, now);
-    const frame = handleFrame(hand, pose, now);
+    // follow a second hand only while a card is open, for the 🫶 heart
+    tracker.setHands?.(pointerEnv.cardOpen() ? 2 : 1);
+    const { hand, pose, hands } = tracker.run(v, now);
+    const frame = handleFrame(hand, pose, now, hands);
     drawHand(ui.canvas, hand, frame.active, frame.progress);
     if(DEBUG){
       const d = gesture.debug;

@@ -1,0 +1,140 @@
+/* ── CAKE ⇄ CARD ────────────────────────────────────────
+   Styles for cake-card.js: the cake taken off the shelf and turned over into
+   its recipe card, the big gesture shown while it's held, the stamp, and the
+   gesture key on the card in hand mode. */
+
+/* the cake in flight, and the room dimming behind it */
+.cc-dim{position:fixed;inset:0;z-index:690;background:oklch(8% 0.025 55 / 0.88);opacity:0;pointer-events:none}
+.cc-flight{position:fixed;z-index:695;perspective:1600px;pointer-events:none}
+.cc-flip{position:absolute;inset:0;transform-style:preserve-3d}
+.cc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.cc-front img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 24px 26px rgba(0,0,0,.45))}
+/* the card's back is its front page, in miniature: the title on the left,
+   the photograph on the right, as the card will show them */
+.cc-back{
+  transform:rotateY(180deg);
+  display:grid;grid-template-columns:48% 52%;
+  background:var(--page-warm, #FAF4E6);border-radius:2px;box-shadow:0 30px 70px rgba(0,0,0,.5);overflow:hidden;
+}
+.cc-back-text{
+  display:flex;flex-direction:column;align-items:center;gap:.35em;padding:7% 8% 0;text-align:center;
+  font-family:var(--font-display, var(--font-serif)),'Noto Serif SC',serif;color:var(--ink, #2E2418);
+}
+.cc-back .cc-eyebrow{font-family:var(--font-hand, var(--font-serif));font-size:.7rem;color:var(--sienna, #A0622A);opacity:.7}
+.cc-back b{font-weight:400;font-size:clamp(1.1rem,2.6vw,1.9rem);line-height:1.06}
+.cc-back i{font-family:var(--font-lora),serif;font-size:.7rem;color:oklch(52% 0.04 58)}
+/* the text to come, as faint ruled lines */
+.cc-lines{align-self:stretch;flex:1;margin-top:8%;
+  background:repeating-linear-gradient(to bottom, rgba(94,78,59,.13) 0 2px, transparent 2px 14px) top / 100% 100% no-repeat;
+  -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent)}
+.cc-back-photo{padding:1.5%;min-height:0}
+.cc-back-photo img{width:100%;height:100%;object-fit:cover;display:block;border-radius:1px}
+
+/* the cake's spot on the shelf, while it's away */
+.cabinet .slice.cc-taken .slice-bare{opacity:1}
+.slice.cc-taken .slice-img{opacity:0 !important;transition:none}
+.slice.cc-taken .plate-shadow{opacity:0}
+
+/* the card arrives already in place, so it skips its own entrance */
+#recipe-modal.cc-hidden{visibility:hidden}
+#recipe-modal.cc-arrived .rm-card{animation:none}
+#rm-card{position:relative}
+
+/* ── holding a gesture: big, in the middle of the card ── */
+.cc-hold{
+  --p:0%;--c:#4d6e36;
+  position:absolute;z-index:40;left:50%;top:50%;translate:-50% -50%;
+  width:190px;height:190px;border-radius:50%;
+  background:conic-gradient(var(--c) 0 var(--p), color-mix(in srgb, var(--c) 18%, transparent) var(--p) 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);pointer-events:none;
+  animation:cc-pop .22s cubic-bezier(.3,1.6,.5,1) both;
+}
+.cc-hold[hidden]{display:none}
+.cc-hold[data-kind="wish"]{--c:#a34a34}
+.cc-hold[data-kind="close"]{--c:#7A6448}
+.cc-hold > div{
+  width:160px;height:160px;border-radius:50%;background:#FFFDF7;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.cc-hold-emoji{font-size:78px;line-height:1}
+.cc-hold small{margin-top:8px;font-family:var(--font-body),'Noto Serif SC',serif;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--c)}
+@keyframes cc-pop{from{scale:.6;opacity:0}to{scale:1;opacity:1}}
+
+/* ── the stamp ── */
+.cc-stamp{
+  position:absolute;z-index:45;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-10deg);
+  padding:.25em .5em .2em;border:6px double currentColor;border-radius:10px;
+  background:rgba(255,251,240,.93);box-shadow:0 10px 30px rgba(0,0,0,.18);
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:600;font-size:clamp(2.4rem,6vw,4.4rem);
+  letter-spacing:.06em;text-transform:uppercase;line-height:1;white-space:nowrap;text-align:center;
+  pointer-events:none;
+  /* worn ink */
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.1 1.55'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+          mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.1 1.55'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:cc-thump .3s cubic-bezier(.2,.9,.3,1.25) both;
+}
+.cc-stamp small{display:block;margin-top:.35em;font-family:var(--font-body),'Noto Serif SC',serif;font-weight:400;font-size:.22em;letter-spacing:.3em}
+.cc-stamp.made{color:#3f6a2c}
+.cc-stamp.wish{color:#a8382c}
+@keyframes cc-thump{
+  from{transform:translate(-50%,-50%) rotate(-4deg) scale(2.2);opacity:0}
+  60% {opacity:1}
+  to  {transform:translate(-50%,-50%) rotate(-10deg) scale(1);opacity:1}
+}
+.cc-heart{
+  position:absolute;z-index:46;top:58%;font-size:clamp(1.8rem,3.4vw,2.6rem);pointer-events:none;opacity:0;
+  animation:cc-float 1.8s ease-out both;
+}
+@keyframes cc-float{
+  0%  {opacity:0;transform:translateY(0) rotate(var(--r)) scale(.4)}
+  15% {opacity:1;transform:translateY(-20px) rotate(var(--r)) scale(1.1)}
+  100%{opacity:0;transform:translateY(-220px) rotate(var(--r)) scale(1)}
+}
+
+/* ── the gesture key, in hand mode ── */
+.cc-key{display:none}
+body.hf-on .cc-key{
+  position:absolute;z-index:30;left:50%;bottom:14px;translate:-50% 0;
+  display:flex;gap:8px;pointer-events:none;
+}
+.cc-key > span{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  background:#2E2418;color:#FFF6E6;border-radius:999px;padding:7px 16px 7px 11px;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:16px;letter-spacing:.03em;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+}
+.cc-key b{font-size:24px;font-weight:400;line-height:1}
+@media (max-width:700px){
+  body.hf-on .cc-key{flex-direction:column;align-items:center;gap:5px;bottom:10px}
+  .cc-key > span{font-size:13px;padding:5px 12px 5px 9px}
+  .cc-key b{font-size:19px}
+  .cc-stamp{font-size:1.55rem;border-width:4px;letter-spacing:.04em}
+  .cc-hold{width:150px;height:150px}
+  .cc-hold > div{width:126px;height:126px}
+  .cc-hold-emoji{font-size:60px}
+}
+
+/* ── pointing by hand at the shelf: the fingertip, and the cake's name ── */
+.hf-cursor{
+  width:68px !important;height:68px !important;margin:-34px 0 0 -34px !important;
+  border:0 !important;background:#FFFDF7 !important;
+  box-shadow:0 0 0 3px #E2B84A, 0 8px 22px rgba(0,0,0,.35) !important;
+  display:flex;align-items:center;justify-content:center;
+}
+.hf-cursor::after{content:'👆';font-size:36px;line-height:1}
+.hf-cursor.pinch::after{content:'🤏'}
+.cc-nametag{
+  position:fixed;z-index:725;translate:-50% -100%;pointer-events:none;
+  background:#2E2418;color:#FFF6E6;border-radius:14px;padding:9px 18px 10px;text-align:center;
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:22px;line-height:1.15;white-space:nowrap;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+  animation:cc-pop .2s cubic-bezier(.3,1.6,.5,1) both;
+}
+.cc-nametag small{display:block;margin-top:3px;font-family:var(--font-body),'Noto Serif SC',serif;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#E2B84A}
+.cc-nametag::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-bottom:0;border-top-color:#2E2418}
+.cc-nametag[hidden]{display:none}
+
+@media (prefers-reduced-motion:reduce){
+  .cc-hold,.cc-stamp,.cc-nametag{animation:none}
+}

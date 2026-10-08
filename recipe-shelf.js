@@ -15,11 +15,13 @@ Object.assign(T.en, {
   'shelf.count': '{n} cakes on the shelf',
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
+  'shelf.pinch': 'pinch 🤏 to open',
 });
 Object.assign(T.zh, {
   'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
+  'shelf.pinch': '捏一下 🤏 打开',
 });
 
 const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
@@ -68,7 +70,7 @@ function sceneCakeHTML(id, r, i){
   const b = SCENE[id];
   const name = t('recipe.' + id) || r.name;
   return `
-    <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}"
+    <button class="slice${id === liftedId ? ' lifted cc-taken' : ''}" type="button" data-recipe="${id}" aria-label="${name}"
             style="--x:${b.x}cqw;--y:${b.y}cqw;--w:${b.w}cqw;--h:${b.h}cqw;--tx:${b.tx}cqw;--ty:${b.ty}cqw">
       <img class="slice-bare" src="./images/shelf/scene/${id}-bare.webp" alt="" draggable="false">
       <img class="slice-img" src="./images/shelf/scene/${id}.webp" alt="" draggable="false">
@@ -80,7 +82,7 @@ function sceneCakeHTML(id, r, i){
 function plankCakeHTML(id, r, i){
   const name = t('recipe.' + id) || r.name;
   return `
-    <button class="slice${id === liftedId ? ' lifted' : ''}" type="button" data-recipe="${id}" aria-label="${name}">
+    <button class="slice${id === liftedId ? ' lifted cc-taken' : ''}" type="button" data-recipe="${id}" aria-label="${name}">
       <span class="slice-stage">
         <span class="plate-shadow" aria-hidden="true"></span>
         <img class="slice-img" src="./images/shelf/${id}.webp" alt="" width="640" height="478" draggable="false">
@@ -133,6 +135,7 @@ function buildShelf(){
     </div></div>`;
   panel.querySelectorAll('.slice').forEach(btn => {
     btn.addEventListener('click', () => pick(btn.dataset.recipe));
+    btn.addEventListener('pointerenter', () => window.cakeCard?.preload(btn.dataset.recipe));
   });
   mirrorHandToggle(panel.querySelector('.foot-hand'));
 }
@@ -169,38 +172,68 @@ window.matchMedia('(max-width:640px)').addEventListener('change', () => {
   if(document.getElementById('recipes-panel')?.classList.contains('active')) buildShelf();
 });
 
-// Lift the cake, then open its recipe card.
+// Take the cake off the shelf: it comes to you and turns over into its
+// recipe card (cake-card.js). Without that, it just lifts and the card opens.
 function pick(id){
   if(liftedId) return;
   const btn = document.querySelector(`.slice[data-recipe="${id}"]`);
   if(!btn) return;
   liftedId = id;
+  point(null);
+  if(window.cakeCard){ window.cakeCard.open(btn, id, () => openRecipeModal(id)); return; }
   btn.classList.add('lifted');
   setTimeout(() => openRecipeModal(id), reducedMotion() ? 0 : LIFT_MS);
 }
 
-// Set the cake back down when the card closes; its tag may show a new stamp.
+// Closing puts the cake back on the shelf; its tag may show a new stamp.
 const originalClose = window.closeRecipeModal;
+let closing = false;
 window.closeRecipeModal = function(){
-  originalClose();
   const id = liftedId;
-  liftedId = null;
   const btn = id && document.querySelector(`.slice[data-recipe="${id}"]`);
-  if(!btn) return;
-  btn.classList.remove('lifted');
-  const tag = btn.querySelector('.slice-tag');
-  tag.querySelector('.tag-stamp')?.remove();
-  tag.insertAdjacentHTML('beforeend', stampFor(id));
+  const settle = () => {
+    liftedId = null;
+    if(!btn) return;
+    btn.classList.remove('lifted');
+    const tag = btn.querySelector('.slice-tag');
+    tag.querySelector('.tag-stamp')?.remove();
+    tag.insertAdjacentHTML('beforeend', stampFor(id));
+  };
+  if(!btn || !window.cakeCard){ originalClose(); settle(); return; }
+  if(closing) return;
+  closing = true;
+  window.cakeCard.close(btn, id, originalClose).then(settle).finally(() => { closing = false; });
 };
 
 window.buildRecipesPage = buildShelf;
 if(document.getElementById('recipes-panel')?.classList.contains('active')) buildShelf();
 
 // The hand tracker lights the cake under the fingertip, as a mouse hover would.
+// Pointing also shows the cake's name above it, big enough to read in a video.
+let nametag = null, nametagFor = null;
 function point(id){
   document.querySelectorAll('#recipes-panel .slice').forEach(btn => {
     btn.classList.toggle('pointed', btn.dataset.recipe === id);
   });
+  if(!nametag){
+    nametag = document.createElement('div');
+    nametag.className = 'cc-nametag';
+    nametag.hidden = true;
+    nametag.innerHTML = '<span></span><small></small>';
+    document.body.appendChild(nametag);
+  }
+  const img = id && document.querySelector(`.slice[data-recipe="${id}"] .slice-img`);
+  if(!img){ nametag.hidden = true; nametagFor = null; return; }
+  const r = img.getBoundingClientRect();
+  nametag.style.left = (r.left + r.width / 2) + 'px';
+  nametag.style.top = (r.top - 6) + 'px';
+  if(nametagFor === id) return;
+  nametagFor = id;
+  window.cakeCard?.preload(id);
+  nametag.firstChild.textContent = t('recipe.' + id) || RJ[id].name;
+  nametag.lastChild.textContent = t('shelf.pinch');
+  nametag.hidden = false;
+  nametag.style.animation = 'none'; nametag.offsetWidth; nametag.style.animation = '';   // pop again for each cake
 }
 
 // For the hand tracker (and tests): the cakes on the shelf, pointing at one, and picking it.
