@@ -940,4 +940,4 @@ ui.btn.addEventListener('click', () => {
 });
 
 // Exposed for testing and for other controls (e.g. keyboard) to reuse.
-window.handFlip = { Flip, Surface, createGesture, gesture, createPointer, handShape, pointer, handleFrame };
+window.handFlip = { Flip, Surface, createGesture, gesture, createPointer, handShape, pointer, handleFrame, startIntro };
