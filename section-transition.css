@@ -1,0 +1,31 @@
+/* ── SECTION TRANSITIONS ────────────────────────────────
+   Styles for section-transition.js: the slide between sections.
+   The header and the hand-mode camera window and its toggle are kept out of
+   the slide (named, so they hold still while the page behind them moves). */
+
+.book-header{view-transition-name:site-header}
+.hf-panel{view-transition-name:hand-window}
+.hf-toggle{view-transition-name:hand-toggle}
+
+::view-transition-old(root),
+::view-transition-new(root){
+  animation-duration:.45s;
+  animation-timing-function:cubic-bezier(.4,0,.2,1);
+  animation-fill-mode:both;
+}
+html[data-slide="forward"]::view-transition-old(root){animation-name:slide-out-left}
+html[data-slide="forward"]::view-transition-new(root){animation-name:slide-in-right}
+html[data-slide="back"]::view-transition-old(root){animation-name:slide-out-right}
+html[data-slide="back"]::view-transition-new(root){animation-name:slide-in-left}
+
+@keyframes slide-out-left{to{transform:translateX(-7%);opacity:0}}
+@keyframes slide-in-right{from{transform:translateX(7%);opacity:0}}
+@keyframes slide-out-right{to{transform:translateX(7%);opacity:0}}
+@keyframes slide-in-left{from{transform:translateX(-7%);opacity:0}}
+
+/* the header and camera window simply stay */
+::view-transition-group(site-header),
+::view-transition-group(hand-window),
+::view-transition-group(hand-toggle){animation:none}
+::view-transition-old(site-header),::view-transition-old(hand-window),::view-transition-old(hand-toggle){display:none}
+::view-transition-new(site-header),::view-transition-new(hand-window),::view-transition-new(hand-toggle){animation:none}

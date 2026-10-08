@@ -244,6 +244,11 @@ const Flip = (() => {
     const from = currentPage();
     const to = neighbourPage(from, dir);
     if(!to) return false;
+    // Between sections, a sweep slides to the next one like the tabs do (section-transition.js).
+    if(from.kind !== 'cover' && to.kind !== 'cover' && document.startViewTransition && !reducedMotion()){
+      showPage(to);
+      return 'slid';
+    }
     const kind = (from.kind === 'cover' || to.kind === 'cover') ? coverFlip(dir) : pageFlip(dir, from, to);
     active = { ...kind, p:0 };
     active.render(0);
@@ -312,8 +317,10 @@ const Surface = (() => {
       if(d < 0 || hb.isClosed()) return false;
       // Past the last history spread: carry on into Recipes.
     }
-    if(!Flip.begin(d)) return false;
-    on = 'flip'; dir = d;
+    const r = Flip.begin(d);
+    if(!r) return false;
+    on = r === 'slid' ? null : 'flip';   // a slide plays on its own; nothing to drag
+    dir = d;
     return true;
   }
 

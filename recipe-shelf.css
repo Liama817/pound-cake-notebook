@@ -6,19 +6,17 @@
    matching porcelain plates, each labelled with a small card on the shelf
    edge. Phones get one painted oak plank per pair of cakes instead. */
 
+/* The shelf sits on the same dark espresso as the rest of the notebook (the
+   page's own background shows through), lit like a display case in a dim shop. */
 #recipes-panel{
-  --paper:#F5EEE1;
-  --ink:#2E2418;
-  --ink-soft:#5E4E3B;
-  --ochre:#A0622A;   /* the one accent: numerals, arrows, active states */
-  --rule:rgba(94,78,59,.28);
-  --tag:#FBF7EE;
+  --ink:#F5ECD7;                    /* titles and links on the dark page */
+  --ink-soft:rgba(240,225,195,.72);
+  --ochre:#D4956A;                  /* the one accent: numerals, arrows, active states */
+  --rule:rgba(220,195,150,.2);
+  --card-ink:#2E2418;               /* type on the cream label cards */
+  --card-ochre:#A0622A;
   overflow-x:clip;
-  background-color:var(--paper);
-  /* laid-paper fibre: fine noise plus faint horizontal chain lines */
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(0deg, rgba(120,95,60,.035) 0 1px, transparent 1px 7px);
+  background:transparent;
 }
 
 .shelf-wrap{
@@ -86,7 +84,7 @@
 /* the cabinet stands on the shop floor */
 .cabinet::after{
   content:'';position:absolute;z-index:-1;left:-1%;right:-1%;bottom:-1.1cqw;height:3.4cqw;
-  background:radial-gradient(ellipse 50% 50% at center, rgba(80,55,25,.34), rgba(80,55,25,.12) 55%, rgba(80,55,25,0) 100%);
+  background:radial-gradient(ellipse 50% 50% at center, rgba(0,0,0,.5), rgba(0,0,0,.18) 55%, rgba(0,0,0,0) 100%);
 }
 .cabinet .slice{
   position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);
@@ -193,12 +191,12 @@
 .tag-no{
   display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;
   min-width:1.3rem;padding-right:.6rem;border-right:1px solid rgba(94,78,59,.18);
-  font-family:var(--font-serif);font-size:1.5rem;line-height:.9;color:var(--ochre);font-variant-numeric:lining-nums;
+  font-family:var(--font-serif);font-size:1.5rem;line-height:.9;color:var(--card-ochre);font-variant-numeric:lining-nums;
 }
 .tag-no small{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-family:var(--font-body);line-height:1;margin-bottom:.1rem}
 .tag-text{display:flex;flex-direction:column;min-width:0}
 .tag-name{
-  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:1.02rem;line-height:1.1;color:var(--ink);
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:1.02rem;line-height:1.1;color:var(--card-ink);
   white-space:nowrap;
 }
 .tag-src{
@@ -219,7 +217,7 @@
 .cabinet .slice:is(:hover, :focus-visible, .pointed, .lifted) :is(.slice-img, .slice-bare){opacity:1}
 .slice:is(:hover, :focus-visible, .pointed) .slice-img{transform:translateY(-5%)}
 .shelf-row .slice:is(:hover, :focus-visible, .pointed) .slice-tag{transform:rotate(1.4deg)}
-.cabinet .slice:is(:hover, :focus-visible, .pointed) .tag-name{color:var(--ochre)}
+.cabinet .slice:is(:hover, :focus-visible, .pointed) .tag-name{color:var(--card-ochre)}
 .slice:is(:hover, :focus-visible, .pointed) .plate-shadow{opacity:.55;transform:scale(.94)}
 /* Chosen: lifted off before the recipe card opens */
 .slice.lifted .slice-img{transform:translateY(-16%) scale(1.05)}
@@ -260,18 +258,6 @@
 .shelf-foot .foot-hand:hover{color:var(--ink);text-decoration-color:var(--ochre)}
 .shelf-foot .foot-hand[aria-pressed="true"]{color:var(--ochre)}
 
-/* ── The rest of the page follows the daylit paper while on Recipes ── */
-body.on-recipes{background:#F5EEE1}
-body.on-recipes .book-header{
-  background:rgba(245,238,225,.95);
-  border-bottom:1px solid rgba(94,78,59,.28);
-  color:#3f3426;
-}
-body.on-recipes .book-header > span{font-size:1.02rem;color:#2E2418}
-body.on-recipes .book-header-nav button,
-body.on-recipes .book-header-nav .tab-btn{color:#6b5844!important;font-size:.72rem}
-body.on-recipes .book-header-nav .tab-btn.active{color:#2E2418!important;border-bottom:1.5px solid #A0622A}
-body.on-recipes .lang-toggle{color:#6b5844;font-family:var(--font-body),'Noto Serif SC',serif}
 /* hand mode is switched from the foot of the shelf page instead */
 body.on-recipes .hf-toggle{display:none}
 
@@ -290,7 +276,7 @@ body.on-recipes .hf-toggle{display:none}
 @media (max-width:640px){
   /* phones stack the planks and scroll, so the shelf is an ordinary block again */
   .shelf-wrap{display:block}
-  .shelf{display:block;flex:none;height:auto;min-height:0}
+  .shelf{display:block;flex:none;height:auto;min-height:0;margin-top:0}   /* no tuck-up under the heading here */
   .shelf-head{grid-template-columns:1fr;gap:.8rem}
   .slice-tag{grid-template-columns:1fr;row-gap:.2rem;padding:.5rem .55rem;text-align:center}
   .tag-no{border:0;padding:0;flex-direction:row;gap:.25rem;align-items:baseline;font-size:1.1rem}
