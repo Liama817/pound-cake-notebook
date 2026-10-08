@@ -1065,19 +1065,25 @@ body{
 }
 .rm-actions{
   display:flex;align-items:center;justify-content:flex-end;gap:.6rem;
-  padding:.3rem 1.6rem .15rem;
+  padding:.55rem 1.6rem .2rem;
   flex-shrink:0;
 }
-/* Demoted to plain text links — no borders, no pills */
+/* Baked / Want to bake: outlined buttons that fill in like a stamp once chosen */
 .rm-stamp-btn{
-  font-family:var(--font-body);font-size:.58rem;letter-spacing:.03em;
-  background:none;border:none;cursor:pointer;
-  color:var(--ink-light);opacity:.7;padding:0;
-  transition:color .15s, opacity .15s;
+  font-family:var(--font-body);font-size:.82rem;font-weight:500;letter-spacing:.03em;
+  background:transparent;border:1.5px solid rgba(120,95,65,.35);border-radius:999px;cursor:pointer;
+  color:var(--ink-mid-warm, #5E4E3B);padding:.32rem .85rem;line-height:1.2;
+  transition:color .15s, background .15s, border-color .15s;
 }
-.rm-stamp-btn:hover{ color:var(--sienna);opacity:1; }
-.rm-stamp-btn.active-made{ color:rgba(50,110,50,.85);opacity:1; }
-.rm-stamp-btn.active-wish{ color:rgba(160,50,70,.85);opacity:1; }
+.rm-stamp-btn:hover{ border-color:var(--sienna);color:var(--sienna); }
+.rm-stamp-btn:focus-visible{ outline:2px solid var(--accent-gold);outline-offset:2px; }
+.rm-stamp-btn.active-made{ background:#4d6e36;border-color:#4d6e36;color:#FFFDF7; }
+.rm-stamp-btn.active-wish{ background:#a34a34;border-color:#a34a34;color:#FFFDF7; }
+.rm-stamp-btn{ white-space:nowrap; }
+@media (max-width:600px){
+  .rm-actions{ flex-wrap:wrap;justify-content:center;row-gap:.4rem;padding:.5rem .8rem .2rem; }
+  .rm-stamp-btn{ font-size:.74rem;padding:.28rem .7rem; }
+}
 .rm-close{
   background:none;border:none;font-size:1rem;line-height:1;
   color:var(--ink-light);opacity:.55;cursor:pointer;padding:0;
@@ -3463,8 +3469,8 @@ body{
 
       <!-- Subtle action links -->
       <div class="rm-actions">
-        <button class="rm-stamp-btn" id="rm-made-btn" onclick="toggleMade(event)">✓ made it</button>
-        <button class="rm-stamp-btn" id="rm-wish-btn" onclick="toggleWish(event)">♡ on my list</button>
+        <button class="rm-stamp-btn" id="rm-made-btn" data-i18n="shelf.made" onclick="toggleMade(event)">✓ Baked</button>
+        <button class="rm-stamp-btn" id="rm-wish-btn" data-i18n="shelf.wish" onclick="toggleWish(event)">♡ Want to bake</button>
         <button class="rm-close" onclick="closeRecipeModal()">✕</button>
       </div>
 
