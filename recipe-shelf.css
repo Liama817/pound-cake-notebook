@@ -31,7 +31,9 @@
   display:flex;flex-direction:column;
 }
 /* the painting takes whatever height the heading and footer leave it */
-.shelf{flex:1 1 0;height:0;min-height:270px;display:flex;align-items:center;justify-content:center}
+/* …but never so small that the labels' type stops fitting them: below about
+   675px wide (450px tall) the page scrolls instead of shrinking the cabinet */
+.shelf{flex:1 1 0;height:0;min-height:450px;display:flex;align-items:center;justify-content:center}
 
 
 /* ── Editorial heading: the title, and a note set over the third cake ── */
@@ -100,7 +102,7 @@
 }
 .cabinet .tag-no{min-width:1.9cqw;padding-right:.9cqw;font-size:clamp(.7rem,2.1cqw,1.5rem)}
 .cabinet .tag-no small{font-size:clamp(.42rem,.8cqw,.58rem);margin-bottom:.1cqw}
-.cabinet .tag-name{font-size:clamp(.62rem,1.42cqw,1.02rem)}
+.cabinet .tag-name{font-size:clamp(.58rem,1.42cqw,1.02rem)}
 .cabinet .tag-src{margin-top:.12cqw;font-size:clamp(.52rem,1.13cqw,.82rem)}
 .cabinet .tag-stamp{font-size:clamp(.5rem,.92cqw,.66rem);padding:.08cqw .55cqw;top:-.8cqw;right:-.8cqw}
 
