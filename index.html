@@ -2816,6 +2816,7 @@ body{
 <link rel="stylesheet" href="./hand-flip.css">
 <link rel="stylesheet" href="./front-page.css">
 <link rel="stylesheet" href="./book-frame.css">
+<link rel="stylesheet" href="./tips-page.css">
 <link rel="stylesheet" href="./section-transition.css">
 </head>
 <body>
@@ -2890,110 +2891,57 @@ body{
 </div><!-- /history-panel -->
 
       <!-- ── Full-width Tips Panel ── -->
-      <div id="tips-panel"><div class="bk-spread">
-        <!-- Header -->
-        <div class="tips-page-header">
-          <h1 class="tips-page-title" data-i18n="tips.title">Tips</h1>
-          <p class="tips-page-sub" data-i18n="tips.sub">Notes from a baker who learned the hard way.</p>
-        </div>
+      <div id="tips-panel"><div class="bk-spread tp">
+        <!-- Tips: two tools on one open book (tips-page.js / tips-page.css) -->
+        <h1 class="tp-chapter" data-i18n="tips.title">Tips</h1>
 
-        <!-- Split layout -->
-        <div class="tips-split">
-
-          <!-- LEFT column: Creaming tool -->
-          <div class="tips-tool-col">
-            <h2 class="tips-tool-title" data-i18n="tips.cream.title">Is My Batter Ready?</h2>
-            <div class="tips-half" id="tips-left">
-              <div class="cream-tool" id="cream-tool">
-                <!-- Bowl image — blends into page via multiply -->
-                <img class="cream-bowl-img" id="cream-bowl-img" src="./images/bowl-1-butter-sugar.png" alt="Creaming stage">
-                <!-- Step label: small-caps, amber -->
-                <span class="cream-step-label" id="cream-step-label">START</span>
-                <!-- One action line -->
-                <p class="cream-step-action" id="cream-step-action">Butter and sugar in the bowl. Not melted — soft.</p>
-                <!-- Decision buttons (step 5 only) -->
-                <div class="cream-decision" id="cream-decision" style="display:none">
-                  <div class="cream-decision-btns">
-                    <button class="cream-dec-btn" data-i18n="cream.decide.good" onclick="creamDecide('good')">One at a time</button>
-                    <button class="cream-dec-btn cream-dec-bad" data-i18n="cream.decide.bad" onclick="creamDecide('bad')">All at once</button>
-                  </div>
-                </div>
-                <!-- Outcome -->
-                <div class="cream-outcome" id="cream-outcome" style="display:none">
-                  <span class="cream-outcome-label" id="cream-outcome-label"></span>
-                  <button class="cream-restart-btn" onclick="creamRestart()">Start over ↺</button>
-                </div>
-                <!-- Numbered dot nav -->
-                <div class="cream-progress" id="cream-progress"></div>
+        <section class="tp-page tp-batter" aria-labelledby="tp-batter-title">
+          <h2 class="tp-title" id="tp-batter-title" data-i18n="tips.cream.title">Is My Batter Ready?</h2>
+          <figure class="tp-print"><div><img id="tp-bowl" src="./images/bowl-1-butter-sugar.png" alt=""></div></figure>
+          <div class="tp-step" aria-live="polite">
+            <p class="tp-eyebrow" id="tp-step-count"></p>
+            <p class="tp-say" id="tp-step-say"></p>
+            <div class="tp-nav" id="tp-nav">
+              <button type="button" class="tp-link" id="tp-back" data-i18n="tips.back">← back</button>
+              <button type="button" class="tp-link" id="tp-next" data-i18n="tips.next">next →</button>
+            </div>
+            <div class="tp-eggs" id="tp-eggs" hidden>
+              <p class="tp-eyebrow" data-i18n="cream.decide.prompt">Now add your eggs</p>
+              <div class="tp-choices">
+                <button type="button" class="tp-link" data-eggs="good" data-i18n="cream.decide.good">one at a time</button>
+                <button type="button" class="tp-link" data-eggs="bad" data-i18n="cream.decide.bad">all at once</button>
               </div>
             </div>
-          </div>
-
-          <!-- RIGHT column: Storage tool -->
-          <div class="tips-tool-col">
-            <h2 class="tips-tool-title" data-i18n="wrap.title">How to Store Your Cake</h2>
-            <div class="tips-half" id="tips-right">
-              <div class="wrap-tool" id="wrap-tool">
-                <p class="wrap-subtitle" data-i18n="wrap.subtitle">Get the right answer for your cake.</p>
-                <div class="wrap-panels">
-                  <!-- Inputs panel -->
-                  <div class="wrap-left-panel">
-                    <div>
-                      <label class="wrap-field-label" data-i18n="wrap.select.q1">What's in your cake?</label>
-                      <select class="wrap-select" id="wrap-select-q1">
-                        <option value="" disabled selected>—</option>
-                        <option value="A" data-i18n="wrap.q1.A">Classic / Chocolate / Citrus</option>
-                        <option value="B" data-i18n="wrap.q1.B">Fresh fruit / Cream cheese / Sour cream</option>
-                        <option value="C" data-i18n="wrap.q1.C">Dried fruit / Nuts / Fruit loaf</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="wrap-field-label" data-i18n="wrap.select.q2">What's on top?</label>
-                      <select class="wrap-select" id="wrap-select-q2">
-                        <option value="" disabled selected>—</option>
-                        <option value="nothing" data-i18n="wrap.q2.nothing">Nothing</option>
-                        <option value="glaze" data-i18n="wrap.q2.glaze">Glaze</option>
-                        <option value="frosting" data-i18n="wrap.q2.frosting">Frosting</option>
-                        <option value="powdered-sugar" data-i18n="wrap.q2.powdered-sugar">Powdered sugar</option>
-                      </select>
-                    </div>
-                    <button class="wrap-submit-new" onclick="wrapSubmitNew()" data-i18n="wrap.submit">See how to store →</button>
-                  </div>
-                  <!-- Result panel -->
-                  <div class="wrap-right-panel" id="wrap-right-panel">
-                    <p class="wrap-result-placeholder" id="wrap-result-placeholder" data-i18n="wrap.result.placeholder">Your storage guide will appear here</p>
-                    <div class="wrap-results-new" id="wrap-results-new" style="display:none">
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">📦</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.store">How to store</span>
-                          <span class="wrap-result-val" id="wr-store-new"></span>
-                          <span class="wrap-result-note" id="wr-store-note-new"></span>
-                        </div>
-                      </div>
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">✨</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.flavor">Best flavor</span>
-                          <span class="wrap-result-val" id="wr-flavor-new"></span>
-                        </div>
-                      </div>
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">📅</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.keeps">How long it keeps</span>
-                          <span class="wrap-result-val" id="wr-keeps-new"></span>
-                        </div>
-                      </div>
-                      <button class="wrap-restart-new" onclick="wrapResetNew()" data-i18n="wrap.restart">Try again</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="tp-done" id="tp-done" hidden>
+              <button type="button" class="tp-link" id="tp-again" data-i18n="cream.restart">start over ↺</button>
             </div>
           </div>
+        </section>
 
-        </div>
+        <section class="tp-page tp-store" aria-labelledby="tp-store-title">
+          <h2 class="tp-title" id="tp-store-title" data-i18n="wrap.title">How to Store Your Cake</h2>
+          <p class="tp-sentence">
+            <span class="tp-clause"><span data-i18n="wrap.s1">My cake is</span>
+              <select class="tp-blank" id="tp-q1" data-i18n-label="wrap.select.q1">
+                <option value="A" data-i18n="wrap.q1.A">plain, chocolate or citrus</option>
+                <option value="B" data-i18n="wrap.q1.B">made with fresh fruit or cream cheese</option>
+                <option value="C" data-i18n="wrap.q1.C">full of dried fruit or nuts</option>
+              </select><span data-i18n="wrap.s1b"></span></span>
+            <span class="tp-clause"><span data-i18n="wrap.s2">and topped with</span>
+              <select class="tp-blank" id="tp-q2" data-i18n-label="wrap.select.q2">
+                <option value="nothing" data-i18n="wrap.q2.nothing">nothing</option>
+                <option value="glaze" data-i18n="wrap.q2.glaze">glaze</option>
+                <option value="frosting" data-i18n="wrap.q2.frosting">frosting</option>
+                <option value="powdered-sugar" data-i18n="wrap.q2.powdered-sugar">powdered sugar</option>
+              </select><span data-i18n="wrap.s3">.</span></span>
+          </p>
+          <div class="tp-rule"></div>
+          <dl class="tp-answer" aria-live="polite">
+            <dt data-i18n="wrap.r.store">Store</dt><dd><span id="tp-store"></span><small id="tp-note"></small></dd>
+            <dt data-i18n="wrap.r.flavor">Best on</dt><dd id="tp-flavor"></dd>
+            <dt data-i18n="wrap.r.keeps">Keeps</dt><dd id="tp-keeps"></dd>
+          </dl>
+        </section>
       </div></div><!-- /tips-panel -->
 
       <!-- ── Recipes Full-Page Panel ── -->
@@ -3626,28 +3574,28 @@ const T = {
     'tips.cream.sub': 'A visual guide to creaming and adding eggs',
     'cream.result.good': 'Smooth, glossy batter ✓',
     'cream.result.bad': 'Curdled, broken batter ✗',
-    'cream.restart': 'Start over ↺',
+    'cream.restart': 'start over ↺',
     'wrap.title': 'How to Store Your Cake',
     'wrap.subtitle': 'Get the right answer for your cake.',
     'wrap.select.q1': 'What\'s in your cake?',
     'wrap.select.q2': 'What\'s on top?',
-    'wrap.q1.A': 'Classic / Chocolate / Citrus',
-    'wrap.q1.B': 'Fresh fruit / Cream cheese / Sour cream',
-    'wrap.q1.C': 'Dried fruit / Nuts / Fruit loaf',
-    'wrap.q2.nothing': 'Nothing',
-    'wrap.q2.glaze': 'Glaze',
-    'wrap.q2.frosting': 'Frosting',
-    'wrap.q2.powdered-sugar': 'Powdered sugar',
+    'wrap.q1.A': 'plain, chocolate or citrus',
+    'wrap.q1.B': 'made with fresh fruit or cream cheese',
+    'wrap.q1.C': 'full of dried fruit or nuts',
+    'wrap.q2.nothing': 'nothing',
+    'wrap.q2.glaze': 'glaze',
+    'wrap.q2.frosting': 'frosting',
+    'wrap.q2.powdered-sugar': 'powdered sugar',
     'wrap.submit': 'See how to store →',
     'wrap.result.placeholder': 'Your storage guide will appear here',
-    'wrap.r.store': 'How to store',
-    'wrap.r.flavor': 'Best flavor',
-    'wrap.r.keeps': 'How long it keeps',
+    'wrap.r.store': 'Store',
+    'wrap.r.flavor': 'Best on',
+    'wrap.r.keeps': 'Keeps',
     'wrap.restart': 'Try again',
     'history.hint': 'click to navigate',
-    'cream.decide.prompt': 'Now add your eggs:',
-    'cream.decide.good': 'One at a time',
-    'cream.decide.bad': 'All at once',
+    'cream.decide.prompt': 'Now add your eggs',
+    'cream.decide.good': 'one at a time',
+    'cream.decide.bad': 'all at once',
   },
   zh: {
     'nav.history': '历史',
@@ -3685,21 +3633,21 @@ const T = {
     'wrap.subtitle': '根据你的蛋糕，找到最佳保存方式。',
     'wrap.select.q1': '你的蛋糕里有什么？',
     'wrap.select.q2': '蛋糕顶部是什么？',
-    'wrap.q1.A': '经典原味 / 巧克力 / 柑橘类',
-    'wrap.q1.B': '新鲜水果 / 奶油奶酪 / 酸奶油',
-    'wrap.q1.C': '干果 / 坚果 / 水果蛋糕',
-    'wrap.q2.nothing': '什么都没有',
-    'wrap.q2.glaze': '糖霜淋面',
-    'wrap.q2.frosting': '奶油霜',
-    'wrap.q2.powdered-sugar': '糖粉',
+    'wrap.q1.A': '原味、巧克力或柑橘的',
+    'wrap.q1.B': '加了新鲜水果或奶油奶酪的',
+    'wrap.q1.C': '加了很多干果或坚果的',
+    'wrap.q2.nothing': '什么都没放',
+    'wrap.q2.glaze': '淋了糖霜',
+    'wrap.q2.frosting': '抹了奶油霜',
+    'wrap.q2.powdered-sugar': '撒了糖粉',
     'wrap.submit': '查看保存方式 →',
     'wrap.result.placeholder': '保存建议将在这里显示',
-    'wrap.r.store': '储存方式',
-    'wrap.r.flavor': '最佳口感',
-    'wrap.r.keeps': '可保存',
+    'wrap.r.store': '保存',
+    'wrap.r.flavor': '最好吃',
+    'wrap.r.keeps': '能放',
     'wrap.restart': '重新选择',
     'history.hint': '点击翻页',
-    'cream.decide.prompt': '现在可以加鸡蛋了：',
+    'cream.decide.prompt': '现在加鸡蛋',
     'cream.decide.good': '一次加一个',
     'cream.decide.bad': '一次全加',
   }
@@ -5373,6 +5321,7 @@ renderAllGallery();
 <script type="module" src="./recipe-shelf.js"></script>
 <script type="module" src="./hand-flip.js"></script>
 <script type="module" src="./front-page.js"></script>
+<script type="module" src="./tips-page.js"></script>
 <script type="module" src="./section-transition.js"></script>
 </body>
 </html>

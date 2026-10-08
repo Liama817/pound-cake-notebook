@@ -72,24 +72,10 @@
   #recipes-panel .bk-spread .shelf-foot{padding-top:1cqw}
   #recipes-panel .bk-spread .shelf-foot .foot-hand{font-size:1.3cqw}
 
-  /* ── Tips on the spread: the batter tool on the left page, storage on the right ── */
+  /* ── Tips on the spread: the chapter title over the left page, then the
+     batter tool on the left page and storage on the right (tips-page.css) ── */
   #tips-panel .bk-spread{
     display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);
-    column-gap:11cqw;padding:4.2cqw 5.5cqw 3.6cqw;
+    column-gap:11cqw;padding:4.2cqw 5.5cqw 3.4cqw;
   }
-  #tips-panel .tips-split{display:contents}
-  #tips-panel .tips-page-header{grid-column:1;grid-row:1;padding:0 0 1.4cqw;border:0}
-  #tips-panel .tips-page-header::after{left:0}
-  #tips-panel .tips-tool-col:first-child{grid-column:1;grid-row:2}
-  #tips-panel .tips-tool-col:last-child{grid-column:2;grid-row:1 / span 2}
-  #tips-panel .tips-page-title{color:#2C2416;font-size:3.6cqw}
-  #tips-panel .tips-page-sub{color:#7A6448;font-size:1.25cqw}
-  #tips-panel .tips-tool-title{color:#2C2416;font-size:2.4cqw}
-  #tips-panel .tips-half{background:transparent;box-shadow:none;padding:.6cqw 0 0;border-radius:0}
-  #tips-panel .tips-half::after{display:none}
-  /* the batter tool's bowl and lines shrink with the page instead of being fixed pixels */
-  #tips-panel .cream-tool{gap:1cqw}
-  #tips-panel .cream-bowl-img{width:min(280px, 21cqw);height:min(280px, 21cqw);
-    -webkit-mask-image:radial-gradient(circle, #000 52%, transparent 71%);mask-image:radial-gradient(circle, #000 52%, transparent 71%)}
-  #tips-panel .cream-step-action{font-size:clamp(.85rem, 1.35cqw, 1.1rem);max-width:30cqw}
 }
