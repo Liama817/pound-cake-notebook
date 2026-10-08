@@ -832,6 +832,7 @@ async function start(){
     await ui.video.play();
     setI18n(ui.status, gesture.mode === 'wave' ? 'hand.wave' : 'hand.noHand');
     running = true;
+    setHandOn(true);
     requestAnimationFrame(loop);
     return true;
   } catch(err){
@@ -846,7 +847,21 @@ async function start(){
   }
 }
 
+// While hand mode is on, the open book makes room for the camera window
+// (hand-flip.css). The page-turning library only measures the book when the
+// window resizes, so tell it to measure again once the book has moved.
+function setHandOn(on){
+  if(document.body.classList.contains('hf-on') === on) return;
+  document.body.classList.toggle('hf-on', on);
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 650);
+}
+// The book also moves later, when the cover opens: measure again each time it has moved.
+window.historyBook?.stage.addEventListener('transitionend', e => {
+  if(e.target === window.historyBook.stage && e.propertyName.startsWith('padding')) window.dispatchEvent(new Event('resize'));
+});
+
 function stopCamera(){
+  setHandOn(false);
   running = false;
   gesture.reset();
   pointer.release();

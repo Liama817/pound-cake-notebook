@@ -118,8 +118,6 @@ body.hb-ready #history-panel{background:transparent}
   letter-spacing:.2em;text-transform:uppercase;color:rgba(240,225,195,.9);
 }
 
-/* While the book is open, keep the hand mirror small so it covers less page */
-body.hb-ready #book.visible ~ .hf-panel:not(.hero){width:150px}
 
 @media (max-width:700px){
   .hb-book{width:min(92vw, calc((100vh - 170px) * .742));aspect-ratio:.742}

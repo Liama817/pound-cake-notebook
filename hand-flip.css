@@ -2,6 +2,17 @@
    Styles for hand-flip.js: the toggle button, the camera
    preview, and the shading drawn on a page while it turns. */
 
+/* The camera window's width in its corner */
+:root{--hf-w:clamp(200px, 19vw, 280px)}
+
+/* While hand mode is on, the open book moves left (and gets narrower only if
+   it must) so the camera window in the corner doesn't cover its pages */
+@media (min-width:601px){
+  body.hf-on .hb-stage:not(.closed){padding-right:calc(var(--hf-w) + 2.8rem)}
+  .hb-stage{transition:padding .6s ease}
+  body.hf-on .hb-book{max-width:100%}
+}
+
 /* Toggle button — sits above the cover (z 500) and the book header (z 100) */
 .hf-toggle{
   position:fixed;right:1.4rem;bottom:1.4rem;z-index:600;
@@ -22,7 +33,7 @@
    the hold ring stay visible while a recipe is open */
 .hf-panel{
   position:fixed;right:1.4rem;bottom:4.4rem;z-index:720;
-  width:200px;
+  width:var(--hf-w);   /* large enough to see yourself and your hand */
   background:rgba(20,12,5,.88);
   border:1px solid rgba(210,185,145,.3);
   box-shadow:0 12px 40px rgba(0,0,0,.55);
