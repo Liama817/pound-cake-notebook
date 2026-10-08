@@ -40,7 +40,7 @@ Object.assign(T.en, {
   'hand.hello': 'Hello! Opening your notebook…',
   'hand.skip': 'Skip',
   'hand.openInstead': 'Open the notebook instead',
-  'hand.shelf': 'Point at a cake, then pinch to open it. Sweep an open hand to turn the page.',
+  'hand.shelf': 'Point at a cake, then pinch to open it. Sweep a flat open palm to change chapter.',
   'hand.pointing': 'Pinch to open this cake.',
   'hand.card': 'Pinch and drag to scroll. Hold an open palm to close. Hold 👍 for baked, a 🫶 heart for want to bake.',
   'hand.hold.close': 'Keep holding to close…',
@@ -68,7 +68,7 @@ Object.assign(T.zh, {
   'hand.hello': '你好！正在为你打开笔记本…',
   'hand.skip': '跳过',
   'hand.openInstead': '直接打开笔记本',
-  'hand.shelf': '用食指指向一块蛋糕，捏合手指打开。张开手掌划动可以翻页。',
+  'hand.shelf': '用食指指向一块蛋糕，捏合手指打开。张开整个手掌划动，可以换章节。',
   'hand.pointing': '捏合手指，打开这块蛋糕。',
   'hand.card': '捏住并上下拖动来滚动。张开手掌停住，关闭食谱。比 👍 标记做过，比 🫶 爱心加入想做。',
   'hand.hold.close': '保持住，即将关闭…',
@@ -422,7 +422,9 @@ function createGesture({ surface, onState, onWave = () => {} }){
 
   // canStart false: keep watching the hand, but don't start a new turn
   // (the Pointer layer is using the hand to point or pinch).
-  function feed(landmarks, now = performance.now(), canStart = true){
+  // strict: the sweep would leave the section at once, with no page to hold
+  // and let fall back, so it has to travel twice as far.
+  function feed(landmarks, now = performance.now(), canStart = true, strict = false){
     if(!landmarks){
       // A fast-moving hand often drops out for a frame or two: until it has
       // been gone a moment, change nothing (keep the page, keep the lock).
@@ -464,7 +466,7 @@ function createGesture({ surface, onState, onWave = () => {} }){
     const dx = smoothX - trail[0].x;
     debug = { hand:true, state:'open hand · ready' };
     const want = dx < 0 ? 1 : -1;                       // sweep left = next page
-    const needed = want > 0 ? SWEEP_START : SWEEP_START * BACK_SWEEP;
+    const needed = (want > 0 ? SWEEP_START : SWEEP_START * BACK_SWEEP) * (strict ? 2 : 1);
     if(canStart && Math.abs(dx) > needed && now >= blockedUntil && now - appearedAt >= SETTLE_MS && !surface.busy()){
       const startX = trail[0].x;
       const inZone = want > 0 ? startX > 0.5 : startX < 0.4;
@@ -514,6 +516,7 @@ const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids fl
                             // A fist's thumb rests about 0.4–0.5 from the index tip.
 const HOLD_MS = 700;        // how long a pose must be held to act
 const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
+const AFTER_POINT_MS = 1200;// after pointing at the shelf, no sweeps either
 const SCROLL_GAIN = 2.2;    // card scroll per unit of hand travel, in card heights
 
 const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -612,6 +615,8 @@ function createPointer(env){
     const u = clamp01((1 - tip.x - 0.2) / 0.6);
     const v = clamp01((tip.y - 0.15) / 0.6);
     cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
+    // lowering or relaxing the hand after pointing mustn't sweep the chapter away
+    quietUntil = Math.max(quietUntil, now + AFTER_POINT_MS);
     const id = env.cakeAt(cursor.u, cursor.v);
     env.point(id);
     env.cursor(cursor, pinching);
@@ -821,7 +826,11 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
   if(gesture.mode === 'turn') p = pointer.feed(hand, pose, now, hands);
   else pointer.release();
   pointerStatus = p.status;
-  const info = gesture.feed(hand, now, !p.claimed);
+  // Off the History book a sweep jumps straight to another chapter, so it
+  // takes a deliberate one: an open palm, travelling twice as far.
+  const strict = !window.historyBook?.visible;
+  const openPalm = !!hand && (pose === 'Open_Palm' || (!pose && handShape(hand).open));
+  const info = gesture.feed(hand, now, !p.claimed && (!strict || openPalm), strict);
   if(p.flash) flashUntil = now + 1600;
   if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
   // a held gesture also shows big on the card itself (cake-card.js)
