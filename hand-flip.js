@@ -50,10 +50,6 @@ Object.assign(T.en, {
   'hand.marked.made': "👍 Baked it!",
   'hand.unmarked.made': "Baked mark removed",
   'hand.marked.wish': "🫶 Want to bake!",
-  // The guide's single line, where the usual message lists several gestures
-  'hand.guide.card': "👍 Hold — baked it   🫶 want to bake   ✋ close",
-  'hand.guide.found': 'hand found',
-  'hand.guide.lost': 'show your hand',
   'hand.unmarked.wish': "Removed from want to bake",
 });
 Object.assign(T.zh, {
@@ -83,9 +79,6 @@ Object.assign(T.zh, {
   'hand.marked.made': "👍 做过了！",
   'hand.unmarked.made': "已取消“做过”",
   'hand.marked.wish': "🫶 想做！",
-  'hand.guide.card': "👍 保持 — 做过了   🫶 想做   ✋ 关闭",
-  'hand.guide.found': '找到手了',
-  'hand.guide.lost': '请露出你的手',
   'hand.unmarked.wish': "已从想做中移除",
 });
 
@@ -584,6 +577,13 @@ function createPointer(env){
   let pulling = null;         // { id, since, lostAt }: a cake being pulled off the shelf
   let aimed = null;           // { id, at }: the cake last pointed at
   let smooth = null;          // the mitt's 1€ filters, { u, v }
+  // An open palm closes the card only once it's shown on purpose: the hand
+  // that just pinched (to take the cake out, or to scroll) relaxes open by
+  // itself, so a palm counts only after the hand has been out of view or in
+  // another shape for a moment.
+  let closeArmed = false;
+  let goneSince = null, otherSince = null;
+  const ARM_MS = 250;
   let trail = [];             // where the mitt was lately, [{ u, v, at }]
 
   function stopPulling(){ if(pulling){ env.pull(pulling.id, null); pulling = null; } }
@@ -599,7 +599,13 @@ function createPointer(env){
 
   // hands: every hand in view (two only while a card is open)
   function feed(lm, pose, now = performance.now(), hands = lm ? [lm] : []){
-    if(!lm){ release(); return { claimed: now < quietUntil, status:null }; }
+    if(!lm){
+      if(goneSince === null) goneSince = now;
+      if(now - goneSince >= ARM_MS) closeArmed = true;
+      release();
+      return { claimed: now < quietUntil, status:null };
+    }
+    goneSince = null;
     const shape = handShape(lm);
     const heart = hands.length >= 2 && isHeart(hands[0], hands[1]);
     const wasPinching = pinching;
@@ -618,17 +624,29 @@ function createPointer(env){
     // ── Recipe card open ──
     if(env.cardOpen()){
       env.point(null); env.cursor(null, 'hide'); cursor = null;
+      // nothing counts while the cake is still turning into the card
+      if(!env.cardReady()){
+        hold = { kind:null, since:now, fired:false };
+        closeArmed = false; otherSince = null;
+        return { claimed:true, status:'card' };
+      }
       if(pinching){
+        closeArmed = false; otherSince = null;
         if(lastPinchY !== null) env.scrollCard((lastPinchY - tip.y) * SCROLL_GAIN);   // hand up = read further down
         lastPinchY = tip.y;
         hold = { kind:null, since:now, fired:false };
         return { claimed:true, status:'card' };
       }
       lastPinchY = null;
-      const kind = heart ? 'wish'
-                 : pose === 'Thumb_Up' ? 'made'
-                 : (pose === 'Open_Palm' || (!pose && shape.open)) ? 'close'
-                 : null;
+      const shown = heart ? 'wish'
+                  : pose === 'Thumb_Up' ? 'made'
+                  : (pose === 'Open_Palm' || (!pose && shape.open)) ? 'close'
+                  : null;
+      if(shown !== 'close'){
+        if(otherSince === null) otherSince = now;
+        if(now - otherSince >= ARM_MS) closeArmed = true;
+      } else otherSince = null;
+      const kind = shown === 'close' && !closeArmed ? null : shown;
       if(kind !== hold.kind) hold = { kind, since:now, fired:false };
       if(!kind || hold.fired) return { claimed:true, status:'card' };
       const progress = Math.min(1, (now - hold.since) / HOLD_MS);
@@ -744,20 +762,14 @@ function buildUI(){
     <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
-  // The guidance on a wide screen: one big line under the page, with whether the hand is seen
-  const guide = document.createElement('div');
-  guide.className = 'hf-guide';
-  guide.setAttribute('aria-hidden', 'true');   // .hf-status is what screen readers hear
-  guide.innerHTML = '<span class="hf-guide-dot"></span><small></small><span class="hf-guide-text"></span>';
-
   // The fingertip on the page while pointing at the Recipes shelf
   const cursor = document.createElement('div');
   cursor.className = 'hf-cursor';
   cursor.hidden = true;
 
-  document.body.append(backdrop, panel, btn, guide, cursor);
+  document.body.append(backdrop, panel, btn, cursor);
   return {
-    btn, sayHi, backdrop, panel, cursor, guide,
+    btn, sayHi, backdrop, panel, cursor,
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
@@ -777,41 +789,21 @@ function drawHand(canvas, landmarks, active, progress = 0){
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
   ctx.clearRect(0, 0, w, h);
   if(!landmarks) return;
-  const at = i => [landmarks[i].x * w, landmarks[i].y * h];
-  const dot = (i, r) => { ctx.beginPath(); ctx.arc(...at(i), r * devicePixelRatio, 0, Math.PI * 2); ctx.fill(); };
-  if(bigPicture()){
-    // the big picture beside the page: thumb and index finger drawn in honey, big enough to see in a video
-    ctx.strokeStyle = 'rgba(226,184,74,.9)';
-    ctx.lineWidth = 2.5 * devicePixelRatio; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for(const chain of [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8]]){
-      ctx.beginPath(); chain.forEach((i, k) => ctx[k ? 'lineTo' : 'moveTo'](...at(i))); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(251,246,234,.55)';
-    [9, 13, 17].forEach(i => dot(i, 2.5));
-    ctx.fillStyle = '#E2B84A';
-    [0, 1, 2, 3, 5, 6, 7].forEach(i => dot(i, 3.5));
-    [4, 8].forEach(i => dot(i, 5.5));
-    // a ring where the thumb and finger meet, once they're close
-    if(handShape(landmarks).pinchGap < PINCH_OFF){
-      const [ax, ay] = at(4), [bx, by] = at(8);
-      ctx.lineWidth = 3 * devicePixelRatio;
-      ctx.beginPath(); ctx.arc((ax + bx) / 2, (ay + by) / 2, 14 * devicePixelRatio, 0, Math.PI * 2); ctx.stroke();
-    }
-  } else {
-    ctx.fillStyle = 'rgba(240,225,195,.7)';
-    for(const p of landmarks){
-      ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
-    }
-    // The index fingertip is the "finger" that drags the page; it glows while turning.
-    ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
-    dot(8, active ? 7 : 4.5);
+  ctx.fillStyle = 'rgba(240,225,195,.7)';
+  for(const p of landmarks){
+    ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
   }
+  // The index fingertip is the "finger" that drags the page; it glows while turning.
+  const tip = landmarks[8];
+  ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
+  ctx.beginPath(); ctx.arc(tip.x * w, tip.y * h, (active ? 7 : 4.5) * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
   // A held pose (close, baked, want to bake) fills a ring around the palm.
   if(progress > 0){
+    const palm = landmarks[9];
     ctx.strokeStyle = '#E2B84A';
     ctx.lineWidth = 3 * devicePixelRatio;
     ctx.beginPath();
-    ctx.arc(...at(9), 22 * devicePixelRatio, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.arc(palm.x * w, palm.y * h, 22 * devicePixelRatio, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
     ctx.stroke();
   }
 }
@@ -835,22 +827,6 @@ function say(key){
   if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
 }
 
-// ── THE GUIDE ───────────────────────────────────────────────
-// With hand mode on a wide screen the camera is a big print beside the page
-// (hand-flip.css), made to be filmed, and one big line under the page says
-// what to do now: the first line of the status, filling up while a gesture
-// is held, with a dot showing whether the hand is seen.
-const wide = window.matchMedia('(min-width:701px)');
-const bigPicture = () => wide.matches && document.body.classList.contains('hf-on');
-function showGuide(seen, progress = 0){
-  const key = ui.status.dataset.i18n || '';
-  const text = key === 'hand.card' ? t('hand.guide.card') : (ui.status.textContent || '').split('\n')[0];
-  const line = ui.guide.querySelector('.hf-guide-text');
-  if(line.textContent !== text) line.textContent = text;
-  ui.guide.classList.toggle('seen', seen);
-  ui.guide.querySelector('small').textContent = t(seen ? 'hand.guide.found' : 'hand.guide.lost');
-  ui.guide.style.setProperty('--p', Math.round(progress * 100) + '%');
-}
 
 const gesture = createGesture({
   surface: Surface,
@@ -865,6 +841,8 @@ const gesture = createGesture({
 const pointerEnv = {
   // A cake being lifted counts too: its card is about to open.
   cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
+  // …and has arrived (not still turning over from the cake)
+  cardReady(){ const m = document.getElementById('recipe-modal'); return !!m && m.classList.contains('open') && !m.classList.contains('cc-hidden'); },
   shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
     !!document.getElementById('recipes-panel')?.classList.contains('active'),
   // The cake pointed at. Each cake owns the part of the shelf nearer to it
@@ -995,7 +973,6 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
   // a held gesture also shows big on the card itself (cake-card.js)
   const holding = pointerStatus && pointerStatus.startsWith('hold.') ? pointerStatus.slice(5) : null;
   window.cakeCard?.hold(holding, p.progress || 0);
-  if(bigPicture()) showGuide(!!hand, p.progress || 0);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
 
@@ -1057,7 +1034,6 @@ async function start(){
 function setHandOn(on){
   if(document.body.classList.contains('hf-on') === on) return;
   document.body.classList.toggle('hf-on', on);
-  if(on) showGuide(false);
   if(!on){ ui.cursor.hidden = true; delete ui.cursor.dataset.placed; }
   setTimeout(() => window.dispatchEvent(new Event('resize')), 650);
 }
