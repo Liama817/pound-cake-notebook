@@ -17,6 +17,10 @@ import { PageFlip } from 'https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/p
 
 Object.assign(T.en, { 'book.hint': 'Drag a page corner to turn the page', 'book.toCover': 'Back to the cover' });
 Object.assign(T.zh, { 'book.hint': '拖动书页的角来翻页', 'book.toCover': '回到封面' });
+// on a touch screen the page turns with a swipe
+Object.assign(T.en, { 'book.hintTouch': 'Swipe to turn the page' });
+Object.assign(T.zh, { 'book.hintTouch': '滑动来翻页' });
+const touchHint = window.matchMedia('(pointer:coarse)').matches;
 
 const PAGE_W = 460, PAGE_H = 620;   // proportions of one page; the book scales to fit
 
@@ -78,7 +82,7 @@ function buildPages(){
 const stage = document.createElement('div');
 stage.className = 'hb-stage closed';
 stage.innerHTML = `<div class="hb-book"></div>
-  <p class="hb-hint" data-i18n="book.hint">${t('book.hint')}</p>`;
+  <p class="hb-hint" data-i18n="${touchHint ? 'book.hintTouch' : 'book.hint'}">${t(touchHint ? 'book.hintTouch' : 'book.hint')}</p>`;
 document.body.appendChild(stage);
 const bookEl = stage.querySelector('.hb-book');
 

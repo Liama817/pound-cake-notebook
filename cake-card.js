@@ -303,7 +303,11 @@ function stamp(kind){
   if(reducedMotion()) return;
   // from the middle of the card (its own spot is where it ends)
   const r = tag.getBoundingClientRect(), c = card.getBoundingClientRect();
-  const dx = (c.left + c.width / 2) - (r.left + r.width / 2), dy = (c.top + c.height / 2) - (r.top + r.height / 2);
+  const ox = (c.left + c.width / 2) - (r.left + r.width / 2), oy = (c.top + c.height / 2) - (r.top + r.height / 2);
+  // the stamp sits tilted (rotate in cake-card.css), and that tilt turns this
+  // move too: turn it back the other way so the stamp lands in the middle
+  const a = -(parseFloat(getComputedStyle(tag).rotate) || 0) * Math.PI / 180;
+  const dx = ox * Math.cos(a) - oy * Math.sin(a), dy = ox * Math.sin(a) + oy * Math.cos(a);
   tag.animate([
     { transform:`translate(${dx}px, ${dy}px) rotate(-14deg) scale(.4)`, opacity:0, offset:0, easing:'cubic-bezier(.3,.8,.4,1.2)' },
     { transform:`translate(${dx}px, ${dy}px) rotate(-6deg) scale(2.2)`, opacity:1, offset:.24, easing:'linear' },     // pops up in the middle

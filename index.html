@@ -1192,6 +1192,15 @@ body{
   box-shadow:2px 4px 18px rgba(44,36,22,.16);
   filter:saturate(.82) brightness(1.05) sepia(.04) contrast(.93);
 }
+/* Phones: the photo sits on top as a band and the text gets the full width below it */
+@media (max-width:600px){
+  .rm-card{ flex-direction:column;height:min(88vh,760px); }
+  .rm-photo-panel{ order:-1;flex:0 0 27%;padding:.7rem .7rem 0; }
+  .rm-content{ width:100%;flex:1;min-height:0;border-right:0; }
+  .rm-title-area{ padding:.8rem 1.2rem .4rem; }
+  .rm-title{ font-size:1.6rem; }
+  .rm-title-rule{ margin:.5rem 1.2rem 0; }
+}
 
 /* Filter pills above recipe tile grid */
 .rj-filter-row{
