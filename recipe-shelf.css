@@ -108,7 +108,7 @@
 .cabinet .tag-no small{font-size:clamp(.42rem,.8cqw,.58rem);margin-bottom:.1cqw}
 .cabinet .tag-name{font-size:clamp(.58rem,1.42cqw,1.02rem)}
 .cabinet .tag-src{margin-top:.12cqw;font-size:clamp(.52rem,1.13cqw,.82rem)}
-.cabinet .tag-stamp{font-size:clamp(.72rem,1.6cqw,1.15rem);padding:.25cqw .9cqw;top:-2.6cqw;right:-1cqw;border-width:clamp(1px,.16cqw,2px)}
+.cabinet .tag-stamp{width:clamp(22px,2.7cqw,34px);font-size:clamp(.8rem,1.55cqw,1.2rem);top:-1.3cqw;right:-1.1cqw;border-width:clamp(1.5px,.18cqw,2px)}
 
 /* ── Planks (phones) ──
    The plank painting is 1481×321: its top surface runs from 1.6% to 58.5%
@@ -205,12 +205,15 @@
   white-space:nowrap;
 }
 .tag-stamp{
-  /* a small rubber stamp inked on the label, matching the big one on the card */
-  position:absolute;top:-.6rem;right:-.6rem;z-index:2;
-  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;
-  padding:.12rem .55rem;border:1.5px solid currentColor;border-radius:50% / 46%;transform:rotate(-7deg);
-  background:rgba(251,246,234,.92);mix-blend-mode:multiply;
-  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");-webkit-mask-size:120px;mask-size:120px;
+  /* a small round rubber-stamp seal with just its sign, matching the big stamp on the card */
+  position:absolute;top:-.7rem;right:-.6rem;z-index:2;
+  width:1.75rem;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:.95rem;line-height:1;
+  border:1.5px solid currentColor;border-radius:50%;transform:rotate(-10deg);
+  background:rgba(251,246,234,.95);box-shadow:0 1px 2px rgba(70,45,18,.15);
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.6 1.7'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+          mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.6 1.7'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size:80px;mask-size:80px;
 }
 .tag-stamp.made{color:#4F6B3A}
 .tag-stamp.wish{color:#B0463A}

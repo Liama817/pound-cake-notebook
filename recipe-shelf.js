@@ -30,8 +30,10 @@ let liftedId = null;
 
 function stampFor(id){
   const s = getStampState(id);
-  if(s.made) return `<span class="tag-stamp made">${t('shelf.made')}</span>`;
-  if(s.wish) return `<span class="tag-stamp wish">${t('shelf.wish')}</span>`;
+  // a small round seal with just its sign; the words are for screen readers and on hover
+  const seal = (kind, sign) => `<span class="tag-stamp ${kind}" role="img" aria-label="${t('shelf.' + kind)}" title="${t('shelf.' + kind)}">${sign}</span>`;
+  if(s.made) return seal('made', '✓');
+  if(s.wish) return seal('wish', '♡');
   return '';
 }
 

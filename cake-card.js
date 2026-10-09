@@ -240,7 +240,29 @@ function stamp(kind){
   card.animate([
     { transform:'none' }, { transform:'translateY(2px)', offset:.3 }, { transform:'none' },
   ], { duration:220, delay:lead, easing:'ease-out' });
+  setTimeout(() => burst(kind), lead + 120);
   pressed = 0;
+}
+
+// As the ink lands, a little burst rises from the tag: 👍 for baked, ❤️ for want to bake.
+const BURST = { made:'👍', wish:'❤️' };
+function burst(kind){
+  if(reducedMotion() || tag.hidden) return;
+  const r = tag.getBoundingClientRect();
+  [[-.34, -26, 0, 1], [-.12, 8, 90, .8], [.08, -10, 40, 1.15], [.28, 14, 150, .85], [.42, -6, 220, 1]].forEach(([dx, rot, delay, size]) => {
+    const e = document.createElement('span');
+    e.className = 'cc-burst';
+    e.textContent = BURST[kind];
+    e.setAttribute('aria-hidden', 'true');
+    e.style.left = (r.left + r.width * (.5 + dx)) + 'px';
+    e.style.top = (r.top + r.height * .55) + 'px';
+    e.style.setProperty('--r', rot + 'deg');
+    e.style.setProperty('--s', size);
+    e.style.setProperty('--dx', (dx * 60) + 'px');
+    e.style.animationDelay = delay + 'ms';
+    document.body.appendChild(e);
+    setTimeout(() => e.remove(), 1700 + delay);
+  });
 }
 
 // Marking by hand or by the buttons both go through toggleMade / toggleWish.

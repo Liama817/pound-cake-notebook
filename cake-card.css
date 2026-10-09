@@ -83,6 +83,20 @@
 .cc-ink .cc-mark{font-size:15px;letter-spacing:0;margin-top:2px}
 .cc-ink i{margin-top:3px;font-family:var(--font-lora),'Noto Serif SC',serif;font-size:12px;letter-spacing:.08em;text-transform:none}
 
+/* the little burst of 👍 or ❤️ as the stamp lands */
+.cc-burst{
+  position:fixed;z-index:760;pointer-events:none;translate:-50% -50%;
+  font-size:calc(30px * var(--s, 1));line-height:1;opacity:0;
+  animation:cc-burst 1.5s cubic-bezier(.2,.7,.3,1) both;
+}
+@keyframes cc-burst{
+  0%  {opacity:0;transform:translate(0,10px) rotate(var(--r)) scale(.4)}
+  18% {opacity:1;transform:translate(calc(var(--dx) * .3),-26px) rotate(var(--r)) scale(1.12)}
+  70% {opacity:1}
+  100%{opacity:0;transform:translate(var(--dx),-150px) rotate(calc(var(--r) * -1)) scale(.95)}
+}
+@media (max-width:700px){ .cc-burst{font-size:calc(22px * var(--s, 1))} }
+
 /* ── the gesture key, in hand mode: a cream paper strip at the card's foot ── */
 .cc-key{display:none}
 body.hf-on .cc-key{
@@ -142,4 +156,5 @@ body.hf-on .cc-key{
 
 @media (prefers-reduced-motion:reduce){
   .cc-tag.arriving,.cc-nametag,.hf-cursor.parked{animation:none}
+  .cc-burst{display:none}
 }
