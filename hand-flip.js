@@ -516,8 +516,7 @@ function createGesture({ surface, onState, onWave = () => {} }){
 const PINCH_ON = 0.25;      // thumb–index gap (in palm lengths) that counts as a pinch…
 const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids flicker).
                             // A fist's thumb rests about 0.4–0.5 from the index tip.
-const HOLD_MS = 700;        // how long a pose must be held to act…
-const MARK_HOLD_MS = 1100;  // …or to mark a card (its sticker forms meanwhile)
+const HOLD_MS = 700;        // how long a pose must be held to act
 const AFTER_CLOSE_MS = 1900; // after closing a card (1.7 s back to the shelf), the open palm mustn't sweep the page
 const AFTER_POINT_MS = 1200;// after pointing at the shelf, no sweeps either
 const PULL_MS = 1500;       // how long a pinch is held to pull a cake off the shelf
@@ -625,7 +624,7 @@ function createPointer(env){
                  : null;
       if(kind !== hold.kind) hold = { kind, since:now, fired:false };
       if(!kind || hold.fired) return { claimed:true, status:'card' };
-      const progress = Math.min(1, (now - hold.since) / (kind === 'close' ? HOLD_MS : MARK_HOLD_MS));
+      const progress = Math.min(1, (now - hold.since) / HOLD_MS);
       if(progress < 1) return { claimed:true, status:'hold.' + kind, progress };
       hold.fired = true;      // the pose has to change before it can act again
       if(kind === 'close'){
