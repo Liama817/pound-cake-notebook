@@ -4,20 +4,33 @@
    gesture key on the card in hand mode. */
 
 /* the cake in flight, and the room dimming behind it */
-.cc-dim{position:fixed;inset:0;z-index:690;opacity:0;pointer-events:none;
-  background:var(--cc-room);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.cc-dim{position:fixed;inset:0;z-index:690;opacity:0;pointer-events:none;background:var(--cc-room)}
 /* the room behind a cake or card: a warm dusk, darker toward the edges (the card's backdrop too) */
 :root{--cc-room:radial-gradient(ellipse at 50% 45%, oklch(24% 0.05 55 / .8), oklch(12% 0.035 50 / .93) 75%)}
 .cc-flight{position:fixed;z-index:695;perspective:1600px;pointer-events:none}
 .cc-flip{position:absolute;inset:0;transform-style:preserve-3d}
 .cc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .cc-front img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 24px 26px rgba(0,0,0,.45))}
-/* the card's back is a copy of the card itself, scaled to the face as it flies */
+/* the card's back is its front page, in miniature: the title on the left,
+   the photograph on the right, as the card will show them */
 .cc-back{
-  transform:rotateY(180deg);overflow:hidden;
-  background:var(--page-warm, #FAF4E6);border-radius:2px;box-shadow:0 30px 70px rgba(0,0,0,.5);
+  transform:rotateY(180deg);
+  display:grid;grid-template-columns:48% 52%;
+  background:var(--page-warm, #FAF4E6);border-radius:2px;box-shadow:0 30px 70px rgba(0,0,0,.5);overflow:hidden;
 }
-.cc-copy{position:absolute;left:0;top:0;transform-origin:0 0;animation:none !important;box-shadow:none;pointer-events:none}
+.cc-back-text{
+  display:flex;flex-direction:column;align-items:center;gap:.35em;padding:7% 8% 0;text-align:center;
+  font-family:var(--font-display, var(--font-serif)),'Noto Serif SC',serif;color:var(--ink, #2E2418);
+}
+.cc-back .cc-eyebrow{font-family:var(--font-hand, var(--font-serif));font-size:.7rem;color:var(--sienna, #A0622A);opacity:.7}
+.cc-back b{font-weight:400;font-size:clamp(1.1rem,2.6vw,1.9rem);line-height:1.06}
+.cc-back i{font-family:var(--font-lora),serif;font-size:.7rem;color:oklch(52% 0.04 58)}
+/* the text to come, as faint ruled lines */
+.cc-lines{align-self:stretch;flex:1;margin-top:8%;
+  background:repeating-linear-gradient(to bottom, rgba(94,78,59,.13) 0 2px, transparent 2px 14px) top / 100% 100% no-repeat;
+  -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent)}
+.cc-back-photo{padding:1.5%;min-height:0}
+.cc-back-photo img{width:100%;height:100%;object-fit:cover;display:block;border-radius:1px}
 
 /* the cake being pulled out by hand rises from the bottom of its plate */
 .cc-held{transform-origin:50% 85%}

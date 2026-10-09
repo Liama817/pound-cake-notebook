@@ -1111,10 +1111,12 @@ function shrinkToCorner(){
   document.body.classList.remove('hf-intro');
   panel.classList.remove('hero', 'greeted');
   if(reducedMotion()) return;
-  const last = panel.getBoundingClientRect();
+  // Measure the window's own box (offset*), not its drawn box: on a wide screen
+  // the print is drawn centred and tilted (hand-flip.css), and that transform is
+  // what the shrink ends on.
   panel.style.transformOrigin = 'top left';
   panel.style.transform =
-    `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${first.width / last.width})`;
+    `translate(${first.left - panel.offsetLeft}px, ${first.top - panel.offsetTop}px) scale(${first.width / panel.offsetWidth})`;
   panel.getBoundingClientRect();   // commit the starting frame
   panel.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1)';
   panel.style.transform = '';
