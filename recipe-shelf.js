@@ -49,10 +49,10 @@ function stampFor(id){
 // (on the shelf lip for the upper floor, on the plinth for the lower).
 const SCENE = {
   orange:       { x:14.118, y:25.372, w:17.857, h:13.096, tx:8.809, ty:13.453 },
-  marble:       { x:40.309, y:25.372, w:18.155, h:13.096, tx:9.048, ty:13.453 },
+  blueberry:    { x:40.22,  y:24.777, w:18.452, h:13.691, tx:9.137, ty:14.048 },
   classic:      { x:67.393, y:25.372, w:18.452, h:13.096, tx:9.048, ty:13.453 },
   rum:          { x:13.821, y:46.801, w:18.452, h:13.691, tx:9.204, ty:13.928 },
-  blueberry:    { x:40.309, y:46.801, w:18.452, h:13.691, tx:9.137, ty:13.928 },
+  marble:       { x:40.398, y:47.396, w:18.155, h:13.096, tx:9.048, ty:13.333 },
   chocZucchini: { x:67.096, y:46.801, w:18.452, h:13.691, tx:9.018, ty:13.928 },
 };
 
