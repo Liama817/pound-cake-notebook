@@ -239,12 +239,16 @@ function point(id){
 }
 
 // A held pinch pulls the cake out bit by bit (p 0–1, null to let go);
-// meanwhile its tag says to keep pinching.
+// meanwhile its tag says to keep pinching, and fills up like a loading bar.
 function pull(id, p){
   const btn = document.querySelector(`.slice[data-recipe="${id}"]`);
   if(!btn || !window.cakeCard) return;
   window.cakeCard.pull(btn, p);
-  if(nametag && nametagFor === id) nametag.textContent = t(p === null ? 'shelf.pinch' : 'shelf.pulling');
+  if(nametag && nametagFor === id){
+    nametag.textContent = t(p === null ? 'shelf.pinch' : 'shelf.pulling');
+    nametag.style.setProperty('--p', ((p || 0) * 100) + '%');   // the tag fills up as it's pulled out
+    nametag.classList.toggle('pulling', p !== null);
+  }
 }
 
 // For the hand tracker (and tests): the cakes on the shelf, pointing at one, and picking it.

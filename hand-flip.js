@@ -517,10 +517,11 @@ const PINCH_ON = 0.25;      // thumb–index gap (in palm lengths) that counts a
 const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids flicker).
                             // A fist's thumb rests about 0.4–0.5 from the index tip.
 const HOLD_MS = 700;        // how long a pose must be held to act
-const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
+const AFTER_CLOSE_MS = 1900; // after closing a card (1.7 s back to the shelf), the open palm mustn't sweep the page
 const AFTER_POINT_MS = 1200;// after pointing at the shelf, no sweeps either
-const PULL_MS = 900;        // how long a pinch is held to pull a cake off the shelf
-const PULL_GRACE_MS = 180;  // a pinch lost for less than this (tracking flicker) isn't letting go
+const PULL_MS = 1500;       // how long a pinch is held to pull a cake off the shelf
+const PULL_GRACE_MS = 300;  // a pinch lost for less than this (tracking flicker) isn't letting go
+const PINCH_BACK_MS = 250;  // closing the fingers moves the fingertip: a pinch counts where it pointed this long before
 const SCROLL_GAIN = 2.2;    // card scroll per unit of hand travel, in card heights
 
 const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -550,6 +551,22 @@ function isHeart(a, b){
   return thumbs < 0.7 && tips < 0.7 && rise > 0.45 && apart > 0.9;
 }
 
+// The "1€ filter" (Casiez et al.): smooths hard while the hand is nearly
+// still, so a tremor doesn't move the mitt, and less the faster it moves, so
+// a deliberate move isn't laggy. One per axis; values 0–1, time in ms.
+function oneEuro(minCutoff = 0.8, beta = 4, dCutoff = 1){
+  let x = null, dx = 0, t = 0;
+  const alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+  return (value, now) => {
+    if(x === null){ x = value; t = now; return x; }
+    const dt = Math.max(1e-3, (now - t) / 1000); t = now;
+    const a = alpha(dCutoff, dt);
+    dx = dx + a * ((value - x) / dt - dx);
+    x = x + alpha(minCutoff + beta * Math.abs(dx), dt) * (value - x);
+    return x;
+  };
+}
+
 function createPointer(env){
   let pinching = false;
   let lastPinchY = null;
@@ -559,13 +576,15 @@ function createPointer(env){
 
   let pulling = null;         // { id, since, lostAt }: a cake being pulled off the shelf
   let aimed = null;           // { id, at }: the cake last pointed at
+  let smooth = null;          // the mitt's 1€ filters, { u, v }
+  let trail = [];             // where the mitt was lately, [{ u, v, at }]
 
   function stopPulling(){ if(pulling){ env.pull(pulling.id, null); pulling = null; } }
 
   function release(){
     stopPulling();
     aimed = null;
-    pinching = false; lastPinchY = null; cursor = null;
+    pinching = false; lastPinchY = null; cursor = null; smooth = null; trail = [];
     hold = { kind:null, since:0, fired:false };
     env.point(null);
     env.cursor(null);
@@ -579,7 +598,10 @@ function createPointer(env){
     const wasPinching = pinching;
     pinching = pinching ? shape.pinchGap < PINCH_OFF : shape.pinchGap < PINCH_ON;
     // A pinch has no name of its own: a named pose (👍, 🤟, fist, open palm…) means it isn't one.
-    if((pose && pose !== 'Pointing_Up') || heart) pinching = false;
+    // But once a cake is pinched on the shelf, the recognizer briefly naming
+    // the pinching hand a fist doesn't drop it; opening the fingers does.
+    const keepPinch = wasPinching && !env.cardOpen();
+    if(heart || (pose && pose !== 'Pointing_Up' && !keepPinch)) pinching = false;
     const pinchStarted = pinching && !wasPinching;
     // Pinch point: halfway between thumb and index tips. Mirror x like a mirror.
     const tip = pinching
@@ -617,7 +639,7 @@ function createPointer(env){
     // ── Shelf showing ──
     hold = { kind:null, since:0, fired:false };
     lastPinchY = null;
-    if(!env.shelfActive()){ stopPulling(); env.point(null); env.cursor(null, 'hide'); cursor = null; return { claimed: now < quietUntil, status:null }; }
+    if(!env.shelfActive()){ stopPulling(); env.point(null); env.cursor(null, 'hide'); cursor = null; smooth = null; trail = []; return { claimed: now < quietUntil, status:null }; }
     // The middle of the camera frame covers the whole window, so the arm needn't stretch.
     const u = clamp01((1 - tip.x - 0.2) / 0.6);
     const v = clamp01((tip.y - 0.15) / 0.6);
@@ -625,11 +647,17 @@ function createPointer(env){
     // quick when it moves on purpose. While pinching the mitt stays where it
     // was aimed: closing the fingers moves the hand, and the pinch point
     // (between thumb and finger) isn't where the fingertip was pointing.
-    if(!cursor) cursor = { u, v };
-    else if(!pinching){
-      const d = Math.hypot(u - cursor.u, v - cursor.v);
-      const k = d > .04 ? .6 : d > .015 ? .4 : .2;
-      cursor = { u: cursor.u + (u - cursor.u) * k, v: cursor.v + (v - cursor.v) * k };
+    if(!smooth) smooth = { u:oneEuro(), v:oneEuro() };
+    if(!cursor || !pinching){
+      cursor = { u: smooth.u(u, now), v: smooth.v(v, now) };
+      trail.push({ ...cursor, at:now });
+      while(trail.length && now - trail[0].at > 600) trail.shift();
+    }
+    // …and as the fingers close, the fingertip has already drifted: go back
+    // to where it pointed just before.
+    if(pinchStarted && !pulling){
+      const before = trail.find(p => now - p.at <= PINCH_BACK_MS);
+      if(before) cursor = { u: before.u, v: before.v };
     }
     // A held pinch pulls the cake out bit by bit; letting go puts it back.
     if(pulling){
@@ -789,20 +817,24 @@ const pointerEnv = {
   cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
   shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
     !!document.getElementById('recipes-panel')?.classList.contains('active'),
-  // The cake under the fingertip, forgiving and a little sticky: the cake
-  // already aimed at keeps it until the fingertip is clearly off it, and a
-  // near miss counts for the nearest cake.
+  // The cake pointed at. Each cake owns the part of the shelf nearer to it
+  // than to any other (no gaps between cakes), as far as a little beyond its
+  // picture. The cake already aimed at keeps it until the fingertip is
+  // clearly nearer another one, so a tremor at a border doesn't flick
+  // between two.
   cakeAt(u, v, current){
     const x = u * innerWidth, y = v * innerHeight;
-    const cakes = window.recipeShelf.cakes();
-    const near = (el, pad) => { const r = el.getBoundingClientRect(); return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad; };
-    const held = current && cakes.find(el => el.dataset.recipe === current);
-    if(held && near(held, 36)) return current;
-    const hit = cakes.find(el => near(el, 14));
-    if(hit) return hit.dataset.recipe;
-    let best = null, bestD = 70;
-    cakes.forEach(el => { const r = el.getBoundingClientRect(); const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) - Math.min(r.width, r.height) / 2; if(d < bestD){ bestD = d; best = el; } });
-    return best ? best.dataset.recipe : null;
+    const REACH = 90, KEEP = 40;   // px
+    let best = null, bestD = Infinity, held = Infinity;
+    window.recipeShelf.cakes().forEach(el => {
+      const r = (el.querySelector('.slice-img') || el).getBoundingClientRect();
+      const out = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if(out > REACH) return;
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+      if(el.dataset.recipe === current) held = d;
+      if(d < bestD){ bestD = d; best = el.dataset.recipe; }
+    });
+    return held - KEEP <= bestD ? current : best;
   },
   point: id => window.recipeShelf?.point(id),
   pick: id => window.recipeShelf.pick(id),

@@ -3,7 +3,7 @@
 //   Opening   the chosen cake is taken off the shelf (its spot is left
 //             bare), comes toward you, and turns over into its recipe card.
 //             Closing plays it backwards, and the cake settles back onto
-//             its plate with a little bounce.
+//             its plate.
 //   Marking   "Baked it" (with the day) and "Want to bake" are rubber
 //             stamps, inked onto a small paper tag taped to the photo's
 //             corner, where the ink always has clean paper under it. Held by
@@ -42,7 +42,7 @@ const GESTURE = { made:'👍', wish:'🫶', close:'✋' };
 
 // ── Cake ⇄ card ─────────────────────────────────────────────
 
-const OPEN_MS = 1600, CLOSE_MS = 900;
+const OPEN_MS = 1600, OPEN_PULLED_MS = 1900, CLOSE_MS = 1700;
 const EASE = 'cubic-bezier(.45,0,.2,1)';
 
 // ── Pulling the cake out (a held pinch) ─────────────────────
@@ -76,10 +76,11 @@ function pull(btn, p){
     pulled = { btn, img, fl, dim };
     btn.classList.add('cc-taken');
   }
-  const e = 1 - Math.pow(1 - p, 2);               // eases out: quick to start, gentle to finish
-  pulled.fl.style.transition = 'none';
+  const e = Math.sin(p * Math.PI / 2);           // eases out: moves as soon as it's pinched, gentle to finish
+  // the camera gives a new p only every frame or two: glide between them
+  pulled.fl.style.transition = 'transform .18s linear';
   pulled.fl.style.transform = `translateY(${-26 * e}%) scale(${1 + .14 * e}) rotate(${-3 * e}deg)`;
-  pulled.dim.style.transition = 'none';
+  pulled.dim.style.transition = 'opacity .18s linear';
   pulled.dim.style.opacity = String(.35 * e);
 }
 
@@ -151,17 +152,18 @@ async function open(btn, id, reveal){
   if(wasPulled){ pulled = null; wasPulled.dim.remove(); wasPulled.fl.remove(); }
   // up and toward you, a moment held in front of you, then it turns over into the card
   const path = wasPulled
-    ? [{ ...box(from), offset:0 }, { ...box(mid), offset:.4 }, { ...box(mid), offset:.52 }, { ...box(to), offset:1 }]
+    ? [{ ...box(from), offset:0, easing:'cubic-bezier(.45,0,.25,1)' }, { ...box(mid), offset:.4, easing:'linear' }, { ...box(mid), offset:.55, easing:'cubic-bezier(.45,0,.25,1)' }, { ...box(to), offset:1 }]
     : [{ ...box(from), offset:0 }, { ...box(lifted), offset:.16 }, { ...box(mid), offset:.42 }, { ...box(mid), offset:.54 }, { ...box(to), offset:1 }];
-  const turn = wasPulled ? .52 : .54;
+  const turn = wasPulled ? .55 : .54;
+  const ms = wasPulled ? OPEN_PULLED_MS : OPEN_MS;
   const anims = [
-    fl.animate(path, { duration:OPEN_MS, easing:EASE, fill:'forwards' }),
+    fl.animate(path, { duration:ms, easing:wasPulled ? 'linear' : EASE, fill:'forwards' }),
     flip.animate([
       { transform:'rotateY(0deg)', offset:0 },
       { transform:'rotateY(0deg)', offset:turn },
       { transform:'rotateY(180deg)', offset:1 },
-    ], { duration:OPEN_MS, easing:EASE, fill:'forwards' }),
-    dim.animate([{ opacity:dimFrom }, { opacity:1, offset:.45 }, { opacity:1 }], { duration:OPEN_MS, fill:'forwards' }),
+    ], { duration:ms, easing:EASE, fill:'forwards' }),
+    dim.animate([{ opacity:dimFrom }, { opacity:1, offset:.45 }, { opacity:1 }], { duration:ms, fill:'forwards' }),
   ];
   await Promise.all(anims.map(a => a.finished));
   modal.classList.add('cc-arrived');      // the card is already in place: no entrance of its own
@@ -179,29 +181,44 @@ async function close(btn, id, hide){
   modal.classList.remove('cc-arrived');
   const to = rectOf(img);
   const mid = middle(to, from);
-  const lifted = { ...to, top: to.top - to.height * .3 };
+  // just above its plate, to come down onto it softly
+  const above = { ...to, top: to.top - to.height * .12 };
+  const back = { ...from, left: from.left + from.width * .02, top: from.top + from.height * .02, width: from.width * .96, height: from.height * .96 };
   const { fl, flip, dim } = flight(id, img.currentSrc || img.src, from, true);
+  // The reverse of opening, unhurried: the card eases back, turns over into
+  // the cake held in front of you, rests a moment, then glides home and
+  // settles onto its plate. Each step eases on its own, so none of it rushes.
+  const io = 'cubic-bezier(.45,0,.25,1)', soft = 'cubic-bezier(.2,.6,.35,1)';
   const anims = [
     fl.animate([
-      { ...box(from), offset:0 },
-      { ...box(mid), offset:.45 },
-      { ...box(lifted), offset:.82 },
+      { ...box(from), offset:0, easing:io },
+      { ...box(back), offset:.12, easing:io },
+      { ...box(mid), offset:.46, easing:'linear' },
+      { ...box(mid), offset:.56, easing:io },
+      { ...box(above), offset:.9, easing:soft },
       { ...box(to), offset:1 },
-    ], { duration:CLOSE_MS, easing:EASE, fill:'forwards' }),
+    ], { duration:CLOSE_MS, fill:'forwards' }),
     flip.animate([
-      { transform:'rotateY(180deg)', offset:0 },
-      { transform:'rotateY(0deg)', offset:.45 },
+      { transform:'rotateY(180deg)', offset:0, easing:io },
+      { transform:'rotateY(180deg)', offset:.1, easing:io },
+      { transform:'rotateY(0deg)', offset:.44 },
       { transform:'rotateY(0deg)', offset:1 },
-    ], { duration:CLOSE_MS, easing:EASE, fill:'forwards' }),
-    dim.animate([{ opacity:1 }, { opacity:1, offset:.3 }, { opacity:0, offset:.8 }, { opacity:0 }], { duration:CLOSE_MS, fill:'forwards' }),
+    ], { duration:CLOSE_MS, fill:'forwards' }),
+    // the room comes back slowly, while the cake goes home
+    dim.animate([
+      { opacity:1, offset:0, easing:'linear' },
+      { opacity:1, offset:.4, easing:'ease-in-out' },
+      { opacity:0, offset:.95 },
+      { opacity:0 },
+    ], { duration:CLOSE_MS, fill:'forwards' }),
   ];
   await Promise.all(anims.map(a => a.finished));
   btn.classList.remove('cc-taken');
   fl.remove(); dim.remove();
-  // back on its plate: a little bounce
+  // on its plate: the smallest settle
   img.animate([
-    { transform:'translateY(-5%)' }, { transform:'translateY(1.5%)', offset:.55 }, { transform:'translateY(0)' },
-  ], { duration:360, easing:'cubic-bezier(.3,.7,.3,1)' });
+    { transform:'translateY(-1.5%)' }, { transform:'translateY(.6%)', offset:.6 }, { transform:'translateY(0)' },
+  ], { duration:320, easing:'ease-out' });
 }
 
 // ── The stamp, on a paper tag taped to the photo's corner ──
@@ -286,24 +303,26 @@ function stamp(kind){
   pressed = 0;
 }
 
-// As the ink lands, a little burst rises from the tag: 👍 for baked, ❤️ for want to bake.
-const BURST = { made:'👍', wish:'❤️' };
+// As the ink lands, a little burst of painted stickers rises from the tag:
+// the oven mitt's thumbs-up for baked, a heart for want to bake.
+const BURST = { made:'thumbs', wish:'heart' };
+Object.values(BURST).forEach(n => { new Image().src = `images/stamp/${n}@2x.png`; });   // ready before the first stamp
 function burst(kind){
   if(reducedMotion() || tag.hidden) return;
   const r = tag.getBoundingClientRect();
-  [[-.34, -26, 0, 1], [-.12, 8, 90, .8], [.08, -10, 40, 1.15], [.28, 14, 150, .85], [.42, -6, 220, 1]].forEach(([dx, rot, delay, size]) => {
+  // [across the tag, tilt, delay, size, drift]: a little fountain, spreading outwards
+  [[-.3, -16, 0, 1, -1.6], [-.1, 10, 140, .78, -.5], [.08, -6, 60, 1.12, .3], [.3, 14, 200, .86, 1.5]].forEach(([dx, rot, delay, size, drift]) => {
     const e = document.createElement('span');
-    e.className = 'cc-burst';
-    e.textContent = BURST[kind];
+    e.className = 'cc-burst ' + BURST[kind];
     e.setAttribute('aria-hidden', 'true');
     e.style.left = (r.left + r.width * (.5 + dx)) + 'px';
-    e.style.top = (r.top + r.height * .55) + 'px';
+    e.style.top = (r.top + r.height * .6) + 'px';
     e.style.setProperty('--r', rot + 'deg');
     e.style.setProperty('--s', size);
-    e.style.setProperty('--dx', (dx * 60) + 'px');
+    e.style.setProperty('--dx', (drift * 70) + 'px');
     e.style.animationDelay = delay + 'ms';
     document.body.appendChild(e);
-    setTimeout(() => e.remove(), 1700 + delay);
+    setTimeout(() => e.remove(), 2000 + delay);
   });
 }
 
