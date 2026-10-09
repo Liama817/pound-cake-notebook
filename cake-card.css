@@ -86,30 +86,23 @@
 .cc-ink .cc-mark{font-size:15px;letter-spacing:0;margin-top:2px}
 .cc-ink i{margin-top:3px;font-family:var(--font-lora),'Noto Serif SC',serif;font-size:12px;letter-spacing:.08em;text-transform:none}
 
-/* the little burst of painted stickers as the stamp lands: each pops up
-   with a squash, then floats away swaying, like a balloon let go */
-.cc-burst{
-  position:fixed;z-index:760;pointer-events:none;translate:-50% -50%;
-  width:calc(62px * var(--s, 1) * var(--k, 1));height:calc(62px * var(--s, 1) * var(--k, 1));
-  background:center/contain no-repeat;
-  filter:drop-shadow(0 3px 4px rgba(60,35,10,.22));
-  opacity:0;animation:cc-burst 1.9s linear both;
+/* the sticker pressed onto the tag's corner after the stamp: a thumbs-up
+   for baked, a heart for want to bake. It shows whenever the ink does. */
+.cc-sticker{
+  position:absolute;left:-40px;bottom:-34px;width:98px;height:98px;
+  background:center/contain no-repeat;transform:rotate(-12deg);
+  filter:drop-shadow(1px 2px 2px rgba(60,35,10,.28));
+  display:none;
 }
-.cc-burst.thumbs{background-image:url("./images/stamp/thumbs.png");background-image:-webkit-image-set(url("./images/stamp/thumbs.png") 1x, url("./images/stamp/thumbs@2x.png") 2x)}
-.cc-burst.heart{background-image:url("./images/stamp/heart.png");background-image:-webkit-image-set(url("./images/stamp/heart.png") 1x, url("./images/stamp/heart@2x.png") 2x)}
-.cc-burst.cookie{background-image:url("./images/stamp/cookie.png");background-image:-webkit-image-set(url("./images/stamp/cookie.png") 1x, url("./images/stamp/cookie@2x.png") 2x)}
-@keyframes cc-burst{
-  0%  {opacity:0;transform:translate(0,12px) rotate(0deg) scale(.2,.2);animation-timing-function:cubic-bezier(.2,.8,.4,1)}
-  13% {opacity:1;transform:translate(calc(var(--dx) * .2),-22px) rotate(var(--r)) scale(1.18,1.1);animation-timing-function:ease-in-out}
-  20% {transform:translate(calc(var(--dx) * .28),-26px) rotate(var(--r)) scale(.9,1.04);animation-timing-function:ease-in-out}
-  28% {transform:translate(calc(var(--dx) * .34),-32px) rotate(var(--r)) scale(1,1);animation-timing-function:ease-in-out}
-  50% {transform:translate(calc(var(--dx) * .62 + 6px),-62px) rotate(calc(var(--r) * -.6)) scale(1,1);animation-timing-function:ease-in-out}
-  72% {opacity:1;transform:translate(calc(var(--dx) * .82 - 6px),-94px) rotate(calc(var(--r) * .5)) scale(.96,.96);animation-timing-function:ease-in}
-  100%{opacity:0;transform:translate(var(--dx),-122px) rotate(calc(var(--r) * -.3)) scale(.85,.85)}
+.cc-ink.made ~ .cc-sticker,.cc-ink.wish ~ .cc-sticker{display:block}
+.cc-ink.made ~ .cc-sticker{--img:url("./images/stamp/sticker-thumb@2x.png");background-image:var(--img)}
+.cc-ink.wish ~ .cc-sticker{--img:url("./images/stamp/sticker-heart@2x.png");background-image:var(--img)}
+/* the gloss smoothed down as it's pressed on: only over the sticker itself */
+.cc-shine{
+  position:absolute;inset:0;
+  background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.75) 50%, transparent 62%) 160% 0 / 250% 100% no-repeat;
+  -webkit-mask:var(--img) center/contain no-repeat;mask:var(--img) center/contain no-repeat;
 }
-/* the mitt is tall and narrow, so it's drawn bigger to look as big as a heart */
-.cc-burst.thumbs{--k:1.3}
-@media (max-width:700px){ .cc-burst{width:calc(40px * var(--s, 1) * var(--k, 1));height:calc(40px * var(--s, 1) * var(--k, 1))} }
 
 /* ── the gesture key, in hand mode: a cream paper strip at the card's foot ── */
 .cc-key{display:none}
@@ -134,6 +127,7 @@ body.hf-on .cc-key{
   .cc-ink b{font-size:14px;letter-spacing:.1em}
   .cc-ink i{font-size:10px}
   .cc-ink{padding:.7em 1.1em .6em;border-width:2px}
+  .cc-sticker{left:-24px;bottom:-22px;width:62px;height:62px}
 }
 
 /* ── pointing by hand at the shelf: the oven mitt, and a paper tag ── */
@@ -177,5 +171,4 @@ body.hf-on .cc-key{
 
 @media (prefers-reduced-motion:reduce){
   .cc-tag.arriving,.cc-nametag,.hf-cursor.parked{animation:none}
-  .cc-burst{display:none}
 }
