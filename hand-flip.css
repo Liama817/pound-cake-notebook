@@ -205,3 +205,8 @@ body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover wai
   body.hf-on #recipe-modal{padding-left:var(--hf-gap);padding-right:var(--hf-gap)}
   body.hf-on .rm-card{width:min(860px, calc(100vw - 2 * var(--hf-gap)))}
 }
+
+/* Phones turn pages by touch: no way into hand mode (see PHONE in hand-flip.js) */
+@media (max-width:700px){
+  .hf-toggle,.hf-sayhi,.shelf-foot .foot-hand{display:none !important}
+}

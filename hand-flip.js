@@ -1176,6 +1176,12 @@ function shrinkToCorner(){
 
 ui.sayHi.addEventListener('click', startIntro);
 
+// Hand mode is made for a laptop: on a phone you hold the screen in one hand
+// and the camera is too close, so phones turn pages by touch (the buttons
+// are hidden in hand-flip.css). If a window narrows to phone size, stop.
+const PHONE = window.matchMedia('(max-width:700px)');
+PHONE.addEventListener('change', () => { if(PHONE.matches && ui.btn.getAttribute('aria-pressed') === 'true') stop(); });
+
 // Skip: put the camera away and open the notebook the ordinary way.
 ui.skip.addEventListener('click', () => { stop(); openBook(); });
 
@@ -1188,4 +1194,5 @@ ui.btn.addEventListener('click', () => {
 });
 
 // Exposed for testing and for other controls (e.g. keyboard) to reuse.
-window.handFlip = { Flip, Surface, createGesture, gesture, createPointer, handShape, pointer, handleFrame, startIntro };
+window.handFlip = { Flip, Surface, createGesture, gesture, createPointer, handShape, pointer, handleFrame, startIntro,
+  available: () => !PHONE.matches };
