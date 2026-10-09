@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Pound Cake Notebook</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Courier+Prime:ital@0;1&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Courier+Prime:ital@0;1&family=Lora:ital,wght@0,400;0,500;1,400&family=Pinyon+Script&display=swap" rel="stylesheet">
 <style>
 /* === RESET & VARIABLES === */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -161,20 +161,9 @@ body{
   letter-spacing:.2em;text-transform:uppercase;
   color:rgba(210,185,145,.75);margin-bottom:clamp(.8rem,2vw,1.2rem);
 }
-.open-btn{
-  display:inline-block;padding:.5rem 1.6rem;
-  background:transparent;border:1px solid rgba(210,185,145,.55);
-  color:rgba(240,225,195,.9);font-family:var(--font-body);
-  font-size:clamp(.56rem,.85vw,.66rem);
-  letter-spacing:.2em;text-transform:uppercase;cursor:pointer;border-radius:0;
-  transition:background .3s,color .3s,border-color .3s,transform .15s;
-}
-.open-btn:hover{
-  background:rgba(210,175,120,.18);
-  border-color:rgba(210,185,145,.9);
-  color:#F5ECD7;
-  transform:translateY(-1px);
-}
+/* The whole book opens on click */
+.book-object{cursor:pointer}
+.book-object:focus-visible{outline:2px solid #E2B84A;outline-offset:6px}
 
 /* ── COVER LANGUAGE TOGGLE ──────────────────────────── */
 .cover-lang-toggle{
@@ -224,6 +213,20 @@ body{
 .book-header-nav{
   display:flex;gap:2rem;font-style:normal;
 }
+/* Back to the cover: the notebook's name, with an arrow */
+.book-home{
+  display:inline-flex;align-items:center;gap:.6rem;
+  border:0;background:none;padding:.3rem .1rem;margin:0;cursor:pointer;
+  font:inherit;letter-spacing:inherit;color:inherit;text-align:left;
+  transition:color .2s ease;
+}
+.book-home-arrow{
+  font-style:normal;font-size:1.05rem;line-height:1;color:var(--accent-gold);
+  transition:translate .25s ease;
+}
+.book-home:hover{color:oklch(88% 0.04 75)}
+.book-home:hover .book-home-arrow{translate:-4px 0}
+.book-home:focus-visible{outline:2px solid var(--accent-gold);outline-offset:3px;border-radius:2px}
 .lang-toggle{
   font-family:var(--font-body);font-size:.6rem;
   letter-spacing:.1em;background:none;border:none;
@@ -1006,7 +1009,7 @@ body{
 #recipe-modal{
   display:none;
   position:fixed;inset:0;
-  background:oklch(8% 0.025 55 / 0.88);
+  background:var(--cc-room, oklch(8% 0.025 55 / 0.88));   /* cake-card.css */
   z-index:700;
   align-items:center;justify-content:center;
   backdrop-filter:blur(6px);
@@ -1076,19 +1079,25 @@ body{
 }
 .rm-actions{
   display:flex;align-items:center;justify-content:flex-end;gap:.6rem;
-  padding:.3rem 1.6rem .15rem;
+  padding:.55rem 1.6rem .2rem;
   flex-shrink:0;
 }
-/* Demoted to plain text links — no borders, no pills */
+/* Baked / Want to bake: outlined buttons that fill in like a stamp once chosen */
 .rm-stamp-btn{
-  font-family:var(--font-body);font-size:.58rem;letter-spacing:.03em;
-  background:none;border:none;cursor:pointer;
-  color:var(--ink-light);opacity:.7;padding:0;
-  transition:color .15s, opacity .15s;
+  font-family:var(--font-body);font-size:.82rem;font-weight:500;letter-spacing:.03em;
+  background:transparent;border:1.5px solid rgba(120,95,65,.35);border-radius:999px;cursor:pointer;
+  color:var(--ink-mid-warm, #5E4E3B);padding:.32rem .85rem;line-height:1.2;
+  transition:color .15s, background .15s, border-color .15s;
 }
-.rm-stamp-btn:hover{ color:var(--sienna);opacity:1; }
-.rm-stamp-btn.active-made{ color:rgba(50,110,50,.85);opacity:1; }
-.rm-stamp-btn.active-wish{ color:rgba(160,50,70,.85);opacity:1; }
+.rm-stamp-btn:hover{ border-color:var(--sienna);color:var(--sienna); }
+.rm-stamp-btn:focus-visible{ outline:2px solid var(--accent-gold);outline-offset:2px; }
+.rm-stamp-btn.active-made{ background:#4d6e36;border-color:#4d6e36;color:#FFFDF7; }
+.rm-stamp-btn.active-wish{ background:#a34a34;border-color:#a34a34;color:#FFFDF7; }
+.rm-stamp-btn{ white-space:nowrap; }
+@media (max-width:600px){
+  .rm-actions{ flex-wrap:wrap;justify-content:center;row-gap:.4rem;padding:.5rem .8rem .2rem; }
+  .rm-stamp-btn{ font-size:.74rem;padding:.28rem .7rem; }
+}
 .rm-close{
   background:none;border:none;font-size:1rem;line-height:1;
   color:var(--ink-light);opacity:.55;cursor:pointer;padding:0;
@@ -1182,6 +1191,15 @@ body{
   display:block;border-radius:2px;
   box-shadow:2px 4px 18px rgba(44,36,22,.16);
   filter:saturate(.82) brightness(1.05) sepia(.04) contrast(.93);
+}
+/* Phones: the photo sits on top as a band and the text gets the full width below it */
+@media (max-width:600px){
+  .rm-card{ flex-direction:column;height:min(88vh,760px); }
+  .rm-photo-panel{ order:-1;flex:0 0 27%;padding:.7rem .7rem 0; }
+  .rm-content{ width:100%;flex:1;min-height:0;border-right:0; }
+  .rm-title-area{ padding:.8rem 1.2rem .4rem; }
+  .rm-title{ font-size:1.6rem; }
+  .rm-title-rule{ margin:.5rem 1.2rem 0; }
 }
 
 /* Filter pills above recipe tile grid */
@@ -2802,6 +2820,14 @@ body{
   .rcp-cake, #left-recipes .rj-card{ animation:none !important; }
 }
 </style>
+<link rel="stylesheet" href="./history-book.css">
+<link rel="stylesheet" href="./recipe-shelf.css">
+<link rel="stylesheet" href="./hand-flip.css">
+<link rel="stylesheet" href="./front-page.css">
+<link rel="stylesheet" href="./book-frame.css">
+<link rel="stylesheet" href="./tips-page.css">
+<link rel="stylesheet" href="./cake-card.css">
+<link rel="stylesheet" href="./section-transition.css">
 </head>
 <body>
 
@@ -2820,14 +2846,15 @@ body{
   <!-- Language toggle on the cover -->
   <button class="cover-lang-toggle" id="cover-lang-toggle" onclick="toggleLang()">EN&nbsp;/&nbsp;中文</button>
   <!-- Physical book object sitting in a dark scene -->
-  <div class="book-object">
+  <!-- The book itself is the way in: click, or Tab + Enter -->
+  <div class="book-object" role="button" tabindex="0" aria-label="Open the notebook"
+       onclick="openBook()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBook()}">
     <img src="./pound-cake-hero.jpg" alt="A glazed pound cake with strawberries">
     <!-- Text lives inside the book, overlaid on the photo -->
     <div class="book-text-overlay">
       <div class="cover-title" data-i18n="cover.title" data-i18n-html="true">The Pound Cake<br>Notebook</div>
       <div class="cover-rule"></div>
-      <div class="cover-tags" data-i18n="cover.tags" data-i18n-html="true">History &nbsp;·&nbsp; Recipes &nbsp;·&nbsp; Baker's Tips</div>
-      <button class="open-btn" data-i18n="cover.open" onclick="openBook()">Open the Notebook →</button>
+      <div class="cover-tags" data-i18n="cover.tags" data-i18n-html="true">History &nbsp;·&nbsp; Recipes &nbsp;·&nbsp; Tips</div>
     </div>
   </div>
 </div>
@@ -2836,7 +2863,11 @@ body{
 <div id="book">
   <div class="book-wrap">
     <div class="book-header">
-      <span data-i18n="cover.subtitle">The Pound Cake Notebook &nbsp;·&nbsp; A Baker's Companion</span>
+      <!-- the notebook's name doubles as the way back to its cover (history-book.js) -->
+      <button class="book-home" id="book-home" onclick="goToCover()" title="Back to the cover" aria-label="Back to the cover">
+        <span class="book-home-arrow" aria-hidden="true">←</span>
+        <span data-i18n="cover.subtitle">The Pound Cake Notebook</span>
+      </button>
       <nav class="book-header-nav">
         <button class="tab-btn active" data-section="history" data-i18n="nav.history" onclick="switchSection('history')">History</button>
         <button class="tab-btn" data-section="recipes" data-i18n="nav.recipes" onclick="switchSection('recipes')">Recipes</button>
@@ -2870,111 +2901,54 @@ body{
 </div><!-- /history-panel -->
 
       <!-- ── Full-width Tips Panel ── -->
-      <div id="tips-panel">
-        <!-- Header -->
-        <div class="tips-page-header">
-          <h1 class="tips-page-title" data-i18n="tips.title">Things I Wish I Knew</h1>
-          <p class="tips-page-sub" data-i18n="tips.sub">Notes from a baker who learned the hard way.</p>
-        </div>
+      <div id="tips-panel"><div class="bk-spread tp">
+        <!-- Tips: two tools on one open book (tips-page.js / tips-page.css) -->
+        <h1 class="tp-chapter" data-i18n="tips.title">Tips</h1>
 
-        <!-- Split layout -->
-        <div class="tips-split">
-
-          <!-- LEFT column: Creaming tool -->
-          <div class="tips-tool-col">
-            <h2 class="tips-tool-title" data-i18n="tips.cream.title">Is My Batter Ready?</h2>
-            <div class="tips-half" id="tips-left">
-              <div class="cream-tool" id="cream-tool">
-                <!-- Bowl image — blends into page via multiply -->
-                <img class="cream-bowl-img" id="cream-bowl-img" src="./images/bowl-1-butter-sugar.png" alt="Creaming stage">
-                <!-- Step label: small-caps, amber -->
-                <span class="cream-step-label" id="cream-step-label">START</span>
-                <!-- One action line -->
-                <p class="cream-step-action" id="cream-step-action">Butter and sugar in the bowl. Not melted — soft.</p>
-                <!-- Decision buttons (step 5 only) -->
-                <div class="cream-decision" id="cream-decision" style="display:none">
-                  <div class="cream-decision-btns">
-                    <button class="cream-dec-btn" data-i18n="cream.decide.good" onclick="creamDecide('good')">One at a time</button>
-                    <button class="cream-dec-btn cream-dec-bad" data-i18n="cream.decide.bad" onclick="creamDecide('bad')">All at once</button>
-                  </div>
-                </div>
-                <!-- Outcome -->
-                <div class="cream-outcome" id="cream-outcome" style="display:none">
-                  <span class="cream-outcome-label" id="cream-outcome-label"></span>
-                  <button class="cream-restart-btn" onclick="creamRestart()">Start over ↺</button>
-                </div>
-                <!-- Numbered dot nav -->
-                <div class="cream-progress" id="cream-progress"></div>
-              </div>
+        <section class="tp-page tp-batter" aria-labelledby="tp-batter-title">
+          <h2 class="tp-title" id="tp-batter-title" data-i18n="tips.eggs.title" data-i18n-html="true">One egg<br><em>at a time.</em></h2>
+          <p class="tp-how" data-i18n="tips.eggs.how">Beat each egg in fully before adding the next — or the batter splits.</p>
+          <!-- the same batter made two ways, split down the middle; drag to compare -->
+          <figure class="tp-print tp-compare">
+            <div class="tp-split" id="tp-split" role="slider" tabindex="0"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" data-i18n-label="tips.eggs.drag">
+              <img src="./images/bowl-5-egg-added.png" alt="" draggable="false">
+              <span class="tp-bad"><img src="./images/bowl-6-curdled.png" alt="" draggable="false"></span>
+              <span class="tp-bar" aria-hidden="true"></span>
+              <span class="tp-knob" aria-hidden="true">⟷</span>
+              <span class="tp-tag tp-tag-good"><span aria-hidden="true">✓ </span><span data-i18n="cream.decide.good">one at a time</span></span>
+              <span class="tp-tag tp-tag-bad"><span aria-hidden="true">✗ </span><span data-i18n="cream.decide.bad">all at once</span></span>
             </div>
-          </div>
+            <figcaption class="tp-hint" data-i18n="tips.eggs.hint">Drag to compare the same batter, made two ways.</figcaption>
+          </figure>
+        </section>
 
-          <!-- RIGHT column: Storage tool -->
-          <div class="tips-tool-col">
-            <h2 class="tips-tool-title" data-i18n="wrap.title">How to Store Your Cake</h2>
-            <div class="tips-half" id="tips-right">
-              <div class="wrap-tool" id="wrap-tool">
-                <p class="wrap-subtitle" data-i18n="wrap.subtitle">Get the right answer for your cake.</p>
-                <div class="wrap-panels">
-                  <!-- Inputs panel -->
-                  <div class="wrap-left-panel">
-                    <div>
-                      <label class="wrap-field-label" data-i18n="wrap.select.q1">What's in your cake?</label>
-                      <select class="wrap-select" id="wrap-select-q1">
-                        <option value="" disabled selected>—</option>
-                        <option value="A" data-i18n="wrap.q1.A">Classic / Chocolate / Citrus</option>
-                        <option value="B" data-i18n="wrap.q1.B">Fresh fruit / Cream cheese / Sour cream</option>
-                        <option value="C" data-i18n="wrap.q1.C">Dried fruit / Nuts / Fruit loaf</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="wrap-field-label" data-i18n="wrap.select.q2">What's on top?</label>
-                      <select class="wrap-select" id="wrap-select-q2">
-                        <option value="" disabled selected>—</option>
-                        <option value="nothing" data-i18n="wrap.q2.nothing">Nothing</option>
-                        <option value="glaze" data-i18n="wrap.q2.glaze">Glaze</option>
-                        <option value="frosting" data-i18n="wrap.q2.frosting">Frosting</option>
-                        <option value="powdered-sugar" data-i18n="wrap.q2.powdered-sugar">Powdered sugar</option>
-                      </select>
-                    </div>
-                    <button class="wrap-submit-new" onclick="wrapSubmitNew()" data-i18n="wrap.submit">See how to store →</button>
-                  </div>
-                  <!-- Result panel -->
-                  <div class="wrap-right-panel" id="wrap-right-panel">
-                    <p class="wrap-result-placeholder" id="wrap-result-placeholder" data-i18n="wrap.result.placeholder">Your storage guide will appear here</p>
-                    <div class="wrap-results-new" id="wrap-results-new" style="display:none">
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">📦</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.store">How to store</span>
-                          <span class="wrap-result-val" id="wr-store-new"></span>
-                          <span class="wrap-result-note" id="wr-store-note-new"></span>
-                        </div>
-                      </div>
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">✨</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.flavor">Best flavor</span>
-                          <span class="wrap-result-val" id="wr-flavor-new"></span>
-                        </div>
-                      </div>
-                      <div class="wrap-result-row">
-                        <span class="wrap-result-icon">📅</span>
-                        <div>
-                          <span class="wrap-result-label" data-i18n="wrap.r.keeps">How long it keeps</span>
-                          <span class="wrap-result-val" id="wr-keeps-new"></span>
-                        </div>
-                      </div>
-                      <button class="wrap-restart-new" onclick="wrapResetNew()" data-i18n="wrap.restart">Try again</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <section class="tp-page tp-store" aria-labelledby="tp-store-title">
+          <h2 class="tp-title" id="tp-store-title" data-i18n="tips.keep.title" data-i18n-html="true">How long will<br>it <em>keep?</em></h2>
+          <p class="tp-sentence">
+            <span class="tp-clause"><span data-i18n="wrap.s1">My cake is</span>
+              <select class="tp-blank" id="tp-q1" data-i18n-label="wrap.select.q1">
+                <option value="A" data-i18n="wrap.q1.A">plain, chocolate or citrus</option>
+                <option value="B" data-i18n="wrap.q1.B">made with fresh fruit or cream cheese</option>
+                <option value="C" data-i18n="wrap.q1.C">full of dried fruit or nuts</option>
+              </select><span data-i18n="wrap.s1b"></span></span>
+            <span class="tp-clause"><span data-i18n="wrap.s2">and topped with</span>
+              <select class="tp-blank" id="tp-q2" data-i18n-label="wrap.select.q2">
+                <option value="nothing" data-i18n="wrap.q2.nothing">nothing</option>
+                <option value="glaze" data-i18n="wrap.q2.glaze">glaze</option>
+                <option value="frosting" data-i18n="wrap.q2.frosting">frosting</option>
+                <option value="powdered-sugar" data-i18n="wrap.q2.powdered-sugar">powdered sugar</option>
+              </select><span data-i18n="wrap.s3">.</span></span>
+          </p>
+          <div aria-live="polite">
+            <p class="tp-keeps"><span id="tp-keeps"></span><small id="tp-store"></small></p>
+            <dl class="tp-answer">
+              <dt data-i18n="tips.keep.how">How</dt><dd id="tp-note"></dd>
+              <dt data-i18n="wrap.r.flavor">Best on</dt><dd id="tp-flavor"></dd>
+            </dl>
           </div>
-
-        </div>
-      </div><!-- /tips-panel -->
+        </section>
+      </div></div><!-- /tips-panel -->
 
       <!-- ── Recipes Full-Page Panel ── -->
       <div id="recipes-panel"></div>
@@ -3467,8 +3441,8 @@ body{
 
       <!-- Subtle action links -->
       <div class="rm-actions">
-        <button class="rm-stamp-btn" id="rm-made-btn" onclick="toggleMade(event)">✓ made it</button>
-        <button class="rm-stamp-btn" id="rm-wish-btn" onclick="toggleWish(event)">♡ on my list</button>
+        <button class="rm-stamp-btn" id="rm-made-btn" data-i18n="shelf.made" onclick="toggleMade(event)">✓ Baked</button>
+        <button class="rm-stamp-btn" id="rm-wish-btn" data-i18n="shelf.wish" onclick="toggleWish(event)">♡ Want to bake</button>
         <button class="rm-close" onclick="closeRecipeModal()">✕</button>
       </div>
 
@@ -3578,11 +3552,10 @@ const T = {
   en: {
     'nav.history': 'History',
     'nav.recipes': 'Recipes',
-    'nav.tips': "Baker's Tips",
+    'nav.tips': 'Tips',
     'cover.title': 'The Pound Cake<br>Notebook',
-    'cover.subtitle': "The Pound Cake Notebook  ·  A Baker's Companion",
-    'cover.tags': "History &nbsp;·&nbsp; Recipes &nbsp;·&nbsp; Baker's Tips",
-    'cover.open': 'Open the Notebook →',
+    'cover.subtitle': "The Pound Cake Notebook",
+    'cover.tags': "History &nbsp;·&nbsp; Recipes &nbsp;·&nbsp; Tips",
     'recipes.title': 'Recipes',
     'recipes.subtitle': 'A collection of pound cakes, baked and gathered.',
     'recipes.cta': 'Open Recipe →',
@@ -3600,44 +3573,43 @@ const T = {
     'recipe.rum': 'Rum Raisin Fruit Loaf',
     'recipe.blueberry': 'Blueberry, Almond & Lemon Cake',
     'recipe.chocZucchini': 'Chocolate Zucchini Loaf',
-    'tips.title': 'Things I Wish I Knew',
+    'tips.title': 'Tips',
     'tips.sub': 'Notes from a baker who learned the hard way.',
     'tips.cream.label': 'The Creaming & Egg Timeline',
     'tips.cream.title': 'Is My Batter Ready?',
     'tips.cream.sub': 'A visual guide to creaming and adding eggs',
     'cream.result.good': 'Smooth, glossy batter ✓',
     'cream.result.bad': 'Curdled, broken batter ✗',
-    'cream.restart': 'Start over ↺',
+    'cream.restart': 'start over ↺',
     'wrap.title': 'How to Store Your Cake',
     'wrap.subtitle': 'Get the right answer for your cake.',
     'wrap.select.q1': 'What\'s in your cake?',
     'wrap.select.q2': 'What\'s on top?',
-    'wrap.q1.A': 'Classic / Chocolate / Citrus',
-    'wrap.q1.B': 'Fresh fruit / Cream cheese / Sour cream',
-    'wrap.q1.C': 'Dried fruit / Nuts / Fruit loaf',
-    'wrap.q2.nothing': 'Nothing',
-    'wrap.q2.glaze': 'Glaze',
-    'wrap.q2.frosting': 'Frosting',
-    'wrap.q2.powdered-sugar': 'Powdered sugar',
+    'wrap.q1.A': 'plain, chocolate or citrus',
+    'wrap.q1.B': 'made with fresh fruit or cream cheese',
+    'wrap.q1.C': 'full of dried fruit or nuts',
+    'wrap.q2.nothing': 'nothing',
+    'wrap.q2.glaze': 'glaze',
+    'wrap.q2.frosting': 'frosting',
+    'wrap.q2.powdered-sugar': 'powdered sugar',
     'wrap.submit': 'See how to store →',
     'wrap.result.placeholder': 'Your storage guide will appear here',
-    'wrap.r.store': 'How to store',
-    'wrap.r.flavor': 'Best flavor',
-    'wrap.r.keeps': 'How long it keeps',
+    'wrap.r.store': 'Store',
+    'wrap.r.flavor': 'Best on',
+    'wrap.r.keeps': 'Keeps',
     'wrap.restart': 'Try again',
     'history.hint': 'click to navigate',
-    'cream.decide.prompt': 'Now add your eggs:',
-    'cream.decide.good': 'One at a time',
-    'cream.decide.bad': 'All at once',
+    'cream.decide.prompt': 'Now add your eggs',
+    'cream.decide.good': 'one at a time',
+    'cream.decide.bad': 'all at once',
   },
   zh: {
     'nav.history': '历史',
     'nav.recipes': '食谱',
-    'nav.tips': '烘焙笔记',
+    'nav.tips': '小贴士',
     'cover.title': '磅蛋糕笔记',
-    'cover.subtitle': '磅蛋糕笔记  ·  烘焙者的随身手册',
-    'cover.tags': '历史 &nbsp;·&nbsp; 食谱 &nbsp;·&nbsp; 烘焙心得',
-    'cover.open': '打开笔记本 →',
+    'cover.subtitle': '磅蛋糕笔记',
+    'cover.tags': '历史 &nbsp;·&nbsp; 食谱 &nbsp;·&nbsp; 小贴士',
     'recipes.title': '食谱',
     'recipes.subtitle': '亲手烘焙，慢慢收集',
     'recipes.cta': '打开食谱 →',
@@ -3655,7 +3627,7 @@ const T = {
     'recipe.rum': '水果蛋糕条',
     'recipe.blueberry': '蓝莓杏仁柠檬蛋糕',
     'recipe.chocZucchini': '巧克力磅蛋糕',
-    'tips.title': '我希望早知道的事',
+    'tips.title': '小贴士',
     'tips.sub': '一个踩过很多坑的烘焙者的笔记',
     'tips.cream.label': '打发黄油与加蛋时间线',
     'tips.cream.title': '我的面糊做对了吗？',
@@ -3667,21 +3639,21 @@ const T = {
     'wrap.subtitle': '根据你的蛋糕，找到最佳保存方式。',
     'wrap.select.q1': '你的蛋糕里有什么？',
     'wrap.select.q2': '蛋糕顶部是什么？',
-    'wrap.q1.A': '经典原味 / 巧克力 / 柑橘类',
-    'wrap.q1.B': '新鲜水果 / 奶油奶酪 / 酸奶油',
-    'wrap.q1.C': '干果 / 坚果 / 水果蛋糕',
-    'wrap.q2.nothing': '什么都没有',
-    'wrap.q2.glaze': '糖霜淋面',
-    'wrap.q2.frosting': '奶油霜',
-    'wrap.q2.powdered-sugar': '糖粉',
+    'wrap.q1.A': '原味、巧克力或柑橘的',
+    'wrap.q1.B': '加了新鲜水果或奶油奶酪的',
+    'wrap.q1.C': '加了很多干果或坚果的',
+    'wrap.q2.nothing': '什么都没放',
+    'wrap.q2.glaze': '淋了糖霜',
+    'wrap.q2.frosting': '抹了奶油霜',
+    'wrap.q2.powdered-sugar': '撒了糖粉',
     'wrap.submit': '查看保存方式 →',
     'wrap.result.placeholder': '保存建议将在这里显示',
-    'wrap.r.store': '储存方式',
-    'wrap.r.flavor': '最佳口感',
-    'wrap.r.keeps': '可保存',
+    'wrap.r.store': '保存',
+    'wrap.r.flavor': '最好吃',
+    'wrap.r.keeps': '能放',
     'wrap.restart': '重新选择',
     'history.hint': '点击翻页',
-    'cream.decide.prompt': '现在可以加鸡蛋了：',
+    'cream.decide.prompt': '现在加鸡蛋',
     'cream.decide.good': '一次加一个',
     'cream.decide.bad': '一次全加',
   }
@@ -3748,7 +3720,7 @@ const RJ={
     zh_name:'橙味磅蛋糕',
     source:'Kojima-sensei · Japanese',
     zh_source:'小岛老师 · 日式',
-    photo:'./images/recipes/orange.jpg',
+    photo:'./images/recipes/card/orange.jpg',
     tags:['Bright','Fragrant','Zesty'],
     zh_tags:['明亮','香气浓郁','清新酸爽'],
     zh_ing:[
@@ -3802,77 +3774,72 @@ const RJ={
         note:'Need to research more on 糖渍橙子 (candied orange peel). May also need to cut the orange peel slices to even smaller pieces for a finer taste. Reminded me of how sweet Japanese sweets can be — their sugar level is not low, which I now appreciate.' }
     ]
   },
-  marble:{
-    name:'Marble Pound Cake',
-    zh_name:'大理石纹磅蛋糕',
-    source:'Tartine Bakery',
-    zh_source:'Tartine Bakery',
-    photo:'./images/recipes/marble_both.jpg',
-    tags:['Dramatic','Two Flavours','Visual'],
-    zh_tags:['视觉惊艳','双重风味','层次丰富'],
+  blueberry:{
+    name:'Blueberry, Almond & Lemon Cake',
+    zh_name:'蓝莓杏仁柠檬蛋糕',
+    source:'Yotam Ottolenghi · NYT Cooking',
+    zh_source:'Yotam Ottolenghi · NYT Cooking',
+    photo:'./images/recipes/Blueberry, Almond and Lemon Cake.jpg',
+    tags:['Bright','Fruity','Almond'],
+    zh_tags:['清新明亮','果香四溢','杏仁风味'],
     zh_ing:[
-      '中筋面粉 — 185g（1⅓杯 + 1大勺）',
-      '泡打粉 — ¾小勺',
-      '无盐黄油 — 200g（¾杯 + 2大勺），室温软化',
-      '细砂糖 — 200g（1杯）',
-      '盐 — ½小勺',
-      '大号鸡蛋 — 3个，室温',
-      '大号蛋黄 — 1个',
-      '酸奶油 — 120g（½杯）',
-      '香草精 — 1大勺',
-      '— 抹茶版：抹茶粉 1大勺',
-      '— 巧克力版：可可粉 3大勺（15g）+ 冷却浓咖啡 1大勺',
-      '— 柠檬糖霜版：柠檬皮屑 2小勺 + 柠檬汁 1½大勺 + 糖粉 125g',
+      '无盐黄油 — 150g（½杯 + 3大勺），室温软化',
+      '细砂糖 — 190g（略不足1杯）',
+      '柠檬皮屑 — 1小勺，另加柠檬汁1大勺',
+      '香草精 — 1小勺',
+      '鸡蛋 — 3个大号，打散',
+      '中筋面粉 — 90g（⅔杯），筛过',
+      '泡打粉 — 1¼小勺',
+      '盐 — ⅛小勺',
+      '杏仁粉 — 110g（1杯）',
+      '新鲜蓝莓 — 200g（1½杯）',
+      '— 糖霜：糖粉70g（⅔杯）+ 柠檬汁1大勺',
     ],
     zh_method:[
-      '<b>预热烤箱，准备模具</b>烤箱预热至350°F / 180°C。在23×12cm吐司模内薄薄涂一层黄油。',
-      '<b>筛粉备用</b>将面粉和泡打粉一同筛匀，备用。',
-      '<b>打发黄油和糖</b>中速打发黄油、细砂糖和盐，约1分钟，至混合均匀、颜色略变浅。',
-      '<b>加入鸡蛋</b>将鸡蛋和蛋黄逐个加入，每次加入后充分搅匀再加下一个。期间注意刮拌盆壁和盆底。',
-      '<b>加入酸奶油和香草精</b>中速将酸奶油和香草精混入面糊。',
-      '<b>拌入面粉</b>调低速，先加入一半面粉混合物，基本拌匀后加入剩余面粉，拌至完全融合。',
-      '<b>大理石纹——抹茶版</b>将三分之二面糊舀入模具。将筛过的抹茶粉拌入剩余三分之一面糊，铺在上方，用曲柄刮刀轻划3到4下即止。',
-      '<b>大理石纹——巧克力版</b>同抹茶版：取三分之一原味面糊，拌入可可粉和咖啡，铺在上方，轻划几下即可。',
-      '<b>烘烤</b>烤45至55分钟，至中心定型、刀插入取出干净。移至晾架完全冷却后脱模。',
+      '<b>预热烤箱，准备模具</b>烤箱预热至375°F / 190°C。在9寸或8寸吐司模内涂黄油，铺烘焙纸吊耳，纸上再涂一层黄油。',
+      '<b>打发黄油和糖</b>将黄油、细砂糖、柠檬皮屑和香草精高速打发3至4分钟至蓬松发白，转中速。',
+      '<b>加入鸡蛋</b>分三次加入打散的蛋液，每次加入后刮拌盆壁。混合物可能略微分离——加入粉类后会自然恢复。',
+      '<b>混合粉类</b>将面粉、泡打粉、盐和杏仁粉在另一个碗中搅匀。',
+      '<b>翻拌粉类</b>调低速，分三次加入粉类，拌至刚好看不见白色粉粒即止。',
+      '<b>加入蓝莓</b>取四分之三的蓝莓，用手轻柔翻入面糊。将面糊舀入准备好的模具。',
+      '<b>第一阶段烘烤</b>烤15分钟，取出后将剩余蓝莓撒在表面。',
+      '<b>继续烘烤</b>放回烤箱再烤15至20分钟，至表面金黄但中心仍略湿润。用锡纸松松盖住，再烤25至30分钟，至刀插入取出干净。',
+      '<b>冷却与淋糖霜</b>在模具中冷却10分钟，移至晾架。完全冷却后，将柠檬汁加入糖粉中搅匀至顺滑，淋在蛋糕上，静置30分钟待凝固后再切。',
     ],
-    zh_thinking:'Tartine的配方对经典1:1:1:1做了一处关键改动：<b>以酸奶油取代部分鸡蛋的油脂</b>，让蛋糕组织更轻盈细腻，带有淡淡的乳酸清香。大理石纹路的手法无论抹茶还是巧克力都一样——<b>取三分之一面糊拌入风味材料，铺在上方，轻轻划拌</b>。关键原则：<b>曲柄刮刀最多划3到4下</b>，再多颜色就会混浊。切面图可以看到两个版本并排——抹茶保持鲜亮，巧克力依然深邃。',
+    zh_thinking:'Ottolenghi用<b>杏仁粉</b>取代了部分中筋面粉，这对蛋糕组织的影响相当显著——杏仁粉不含麸质，提供的是油脂和水分而非结构。成品比经典磅蛋糕<b>更扎实、更湿润细腻</b>，内部带有类似软糕的质感。<b>分阶段烘烤</b>（中途加入蓝莓）的目的是让顶部的蓝莓保持饱满，而不是沉底烤焦。这款蛋糕<b>当天最好吃</b>，但柠檬糖霜能封住水分，让它多保鲜一天。',
     ing:[
-      'All-purpose flour — 185g (1⅓ cups + 1 Tbsp)',
-      'Baking powder — ¾ tsp',
-      'Unsalted butter — 200g (¾ cup + 2 Tbsp), room temperature',
-      'Granulated sugar — 200g (1 cup)',
-      'Salt — ½ tsp',
-      'Large eggs — 3, room temperature',
-      'Large egg yolk — 1',
-      'Sour cream — 120g (½ cup)',
-      'Vanilla extract — 1 Tbsp',
-      '— Matcha variation: 1 Tbsp matcha powder',
-      '— Chocolate variation: 3 Tbsp (15g) cocoa powder + 1 Tbsp cooled coffee',
-      '— Glazed lemon: 2 tsp zest + 1½ Tbsp lemon juice + 125g confectioners sugar'
+      'Unsalted butter — 150g (½ cup + 3 Tbsp), room temperature',
+      'Granulated sugar — 190g (1 scant cup)',
+      'Lemon zest — 1 tsp, plus 1 Tbsp lemon juice',
+      'Vanilla extract — 1 tsp',
+      'Eggs — 3 large, beaten',
+      'All-purpose flour — 90g (⅔ cup), sifted',
+      'Baking powder — 1¼ tsp',
+      'Salt — ⅛ tsp',
+      'Almond flour — 110g (1 cup)',
+      'Fresh blueberries — 200g (1½ cups)',
+      '— Icing: 70g (⅔ cup) icing sugar + 1 Tbsp lemon juice'
     ],
     method:[
-      '<b>Preheat and prep</b>Preheat oven to 350°F / 180°C. Lightly butter a 9×5 in (23×12 cm) loaf pan.',
-      '<b>Sift dry ingredients</b>Sift the flour and baking powder together. Set aside.',
-      '<b>Cream butter and sugar</b>Beat butter, granulated sugar, and salt on medium speed until combined and lighter in colour, about 1 minute.',
-      '<b>Add eggs</b>Add the eggs and egg yolk one at a time, mixing well after each addition until incorporated before adding the next. Scrape down the sides and bottom of the bowl.',
-      '<b>Add sour cream and vanilla</b>On medium speed, mix in the sour cream and vanilla extract.',
-      '<b>Fold in flour</b>On low speed, add half the flour mixture. Once mostly combined, add the remaining flour and mix until fully incorporated.',
-      '<b>Marble — matcha</b>Spoon two-thirds of the batter into the prepared pan. Mix sifted matcha powder into the reserved third. Spoon on top and marble slightly with an offset spatula — 3 to 4 passes only.',
-      '<b>Marble — chocolate</b>Same as matcha: reserve one-third of the plain batter, mix in sifted cocoa powder and coffee, spoon on top, marble slightly.',
-      '<b>Bake</b>Bake 45–55 minutes until the centre is set and a knife inserted into the centre comes out clean. Transfer to a wire rack and cool completely, then turn out.',
+      '<b>Preheat and prep</b>Heat oven to 375°F / 190°C. Grease a 9- or 8-inch loaf pan, line with a parchment sling and butter the paper.',
+      '<b>Cream butter and sugar</b>Beat butter, sugar, lemon zest and vanilla on high for 3–4 minutes until light. Lower to medium speed.',
+      '<b>Add the eggs</b>Add the beaten eggs in three additions, scraping the bowl as needed. The mix may split slightly — it will come back together once the dry ingredients go in.',
+      '<b>Mix dry ingredients</b>Whisk together flour, baking powder, salt, and almond flour in a separate bowl.',
+      '<b>Fold in dry ingredients</b>With mixer on low, add dry ingredients in three additions, mixing just until no white specks remain.',
+      '<b>Add blueberries</b>Fold in three-quarters of the blueberries by hand. Scoop batter into the prepared pan.',
+      '<b>First bake</b>Bake for 15 minutes, then scatter the remaining blueberries over the top.',
+      '<b>Continue baking</b>Return to oven for 15–20 minutes more until golden but still slightly uncooked in the centre. Cover loosely with foil and bake a further 25–30 minutes until a knife comes out clean.',
+      '<b>Cool and ice</b>Cool in pan for 10 minutes, then transfer to a rack. Once fully cool, whisk lemon juice into icing sugar until smooth and pourable. Drizzle over the cake and let set 30 minutes before slicing.'
     ],
-    thinking:'The Tartine recipe departs from the classic 1:1:1:1 in one key way: <b>sour cream replaces some of the egg fat</b>, making the crumb lighter and more tender with a slight tang. The marble technique is the same whether matcha or chocolate — <b>reserve one-third of the batter, mix in the flavouring, spoon on top and swirl</b>. The critical rule: <b>3 to 4 passes with an offset spatula maximum</b>. More and the colours muddy. The cross-section in the photo shows both versions side by side — the matcha stays bright, the chocolate stays dark.',
-    bakes:[
-      { date:'March 26, 2026', photos:['./images/recipes/marble_both.jpg','./images/recipes/marble.jpg'],
-        note:'You can really see how sour cream brings tenderness to the recipe. I find this one really tasty.' }
-    ]
+    thinking:'Ottolenghi replaces a portion of all-purpose flour with <b>almond flour</b>, which changes the crumb dramatically — almond flour has no gluten, so it contributes fat and moisture rather than structure. The result is <b>denser and more tender</b> than a classic pound cake, with a fudgier interior. The <b>staged baking method</b> (add blueberries halfway through) means the top fruit stays plump rather than sinking and burning. The cake is at its best <b>on the day it\'s made</b>, but the lemon icing seals in moisture and buys it another day.',
+    bakes:[]
   },
   classic:{
     name:'Classic Quatre-Quarts',
     zh_name:'经典四等分磅蛋糕',
     source:'Personal · 1:1:1:1 by weight',
     zh_source:'自用配方 · 1:1:1:1等重比例',
-    photo:'./images/recipes/classic.jpg',
+    photo:'./images/recipes/card/classic.jpg',
     tags:['Dense','Buttery','Golden'],
     zh_tags:['扎实','黄油香浓','金黄诱人'],
     zh_ing:[
@@ -3897,7 +3864,7 @@ const RJ={
     zh_name:'朗姆葡萄水果蛋糕',
     source:'Ferrandi Paris · French Pâtisserie',
     zh_source:'Ferrandi Paris · 法式糕点',
-    photo:'./images/recipes/rum.jpg',
+    photo:'./images/recipes/card/rum.jpg',
     tags:['Boozy','Fruity','French'],
     zh_tags:['酒香浓郁','果味丰盈','法式经典'],
     zh_ing:[
@@ -3963,65 +3930,70 @@ const RJ={
         note:'The best one I\'ve made so far — the taste is outstanding. It\'s inspired me to use rum-soaked raisins and dried fruits more in baking. The flavour a day later is noticeably deeper than fresh out of the oven.' }
     ]
   },
-  blueberry:{
-    name:'Blueberry, Almond &amp; Lemon Cake',
-    zh_name:'蓝莓杏仁柠檬蛋糕',
-    source:'Yotam Ottolenghi · NYT Cooking',
-    zh_source:'Yotam Ottolenghi · NYT Cooking',
-    photo:'./images/recipes/Blueberry, Almond and Lemon Cake.jpg',
-    tags:['Bright','Fruity','Almond'],
-    zh_tags:['清新明亮','果香四溢','杏仁风味'],
+  marble:{
+    name:'Marble Pound Cake',
+    zh_name:'大理石纹磅蛋糕',
+    source:'Tartine Bakery',
+    zh_source:'Tartine Bakery',
+    photo:'./images/recipes/card/marble_both.jpg',
+    tags:['Dramatic','Two Flavours','Visual'],
+    zh_tags:['视觉惊艳','双重风味','层次丰富'],
     zh_ing:[
-      '无盐黄油 — 150g（½杯 + 3大勺），室温软化',
-      '细砂糖 — 190g（略不足1杯）',
-      '柠檬皮屑 — 1小勺，另加柠檬汁1大勺',
-      '香草精 — 1小勺',
-      '鸡蛋 — 3个大号，打散',
-      '中筋面粉 — 90g（⅔杯），筛过',
-      '泡打粉 — 1¼小勺',
-      '盐 — ⅛小勺',
-      '杏仁粉 — 110g（1杯）',
-      '新鲜蓝莓 — 200g（1½杯）',
-      '— 糖霜：糖粉70g（⅔杯）+ 柠檬汁1大勺',
+      '中筋面粉 — 185g（1⅓杯 + 1大勺）',
+      '泡打粉 — ¾小勺',
+      '无盐黄油 — 200g（¾杯 + 2大勺），室温软化',
+      '细砂糖 — 200g（1杯）',
+      '盐 — ½小勺',
+      '大号鸡蛋 — 3个，室温',
+      '大号蛋黄 — 1个',
+      '酸奶油 — 120g（½杯）',
+      '香草精 — 1大勺',
+      '— 抹茶版：抹茶粉 1大勺',
+      '— 巧克力版：可可粉 3大勺（15g）+ 冷却浓咖啡 1大勺',
+      '— 柠檬糖霜版：柠檬皮屑 2小勺 + 柠檬汁 1½大勺 + 糖粉 125g',
     ],
     zh_method:[
-      '<b>预热烤箱，准备模具</b>烤箱预热至375°F / 190°C。在9寸或8寸吐司模内涂黄油，铺烘焙纸吊耳，纸上再涂一层黄油。',
-      '<b>打发黄油和糖</b>将黄油、细砂糖、柠檬皮屑和香草精高速打发3至4分钟至蓬松发白，转中速。',
-      '<b>加入鸡蛋</b>分三次加入打散的蛋液，每次加入后刮拌盆壁。混合物可能略微分离——加入粉类后会自然恢复。',
-      '<b>混合粉类</b>将面粉、泡打粉、盐和杏仁粉在另一个碗中搅匀。',
-      '<b>翻拌粉类</b>调低速，分三次加入粉类，拌至刚好看不见白色粉粒即止。',
-      '<b>加入蓝莓</b>取四分之三的蓝莓，用手轻柔翻入面糊。将面糊舀入准备好的模具。',
-      '<b>第一阶段烘烤</b>烤15分钟，取出后将剩余蓝莓撒在表面。',
-      '<b>继续烘烤</b>放回烤箱再烤15至20分钟，至表面金黄但中心仍略湿润。用锡纸松松盖住，再烤25至30分钟，至刀插入取出干净。',
-      '<b>冷却与淋糖霜</b>在模具中冷却10分钟，移至晾架。完全冷却后，将柠檬汁加入糖粉中搅匀至顺滑，淋在蛋糕上，静置30分钟待凝固后再切。',
+      '<b>预热烤箱，准备模具</b>烤箱预热至350°F / 180°C。在23×12cm吐司模内薄薄涂一层黄油。',
+      '<b>筛粉备用</b>将面粉和泡打粉一同筛匀，备用。',
+      '<b>打发黄油和糖</b>中速打发黄油、细砂糖和盐，约1分钟，至混合均匀、颜色略变浅。',
+      '<b>加入鸡蛋</b>将鸡蛋和蛋黄逐个加入，每次加入后充分搅匀再加下一个。期间注意刮拌盆壁和盆底。',
+      '<b>加入酸奶油和香草精</b>中速将酸奶油和香草精混入面糊。',
+      '<b>拌入面粉</b>调低速，先加入一半面粉混合物，基本拌匀后加入剩余面粉，拌至完全融合。',
+      '<b>大理石纹——抹茶版</b>将三分之二面糊舀入模具。将筛过的抹茶粉拌入剩余三分之一面糊，铺在上方，用曲柄刮刀轻划3到4下即止。',
+      '<b>大理石纹——巧克力版</b>同抹茶版：取三分之一原味面糊，拌入可可粉和咖啡，铺在上方，轻划几下即可。',
+      '<b>烘烤</b>烤45至55分钟，至中心定型、刀插入取出干净。移至晾架完全冷却后脱模。',
     ],
-    zh_thinking:'Ottolenghi用<b>杏仁粉</b>取代了部分中筋面粉，这对蛋糕组织的影响相当显著——杏仁粉不含麸质，提供的是油脂和水分而非结构。成品比经典磅蛋糕<b>更扎实、更湿润细腻</b>，内部带有类似软糕的质感。<b>分阶段烘烤</b>（中途加入蓝莓）的目的是让顶部的蓝莓保持饱满，而不是沉底烤焦。这款蛋糕<b>当天最好吃</b>，但柠檬糖霜能封住水分，让它多保鲜一天。',
+    zh_thinking:'Tartine的配方对经典1:1:1:1做了一处关键改动：<b>以酸奶油取代部分鸡蛋的油脂</b>，让蛋糕组织更轻盈细腻，带有淡淡的乳酸清香。大理石纹路的手法无论抹茶还是巧克力都一样——<b>取三分之一面糊拌入风味材料，铺在上方，轻轻划拌</b>。关键原则：<b>曲柄刮刀最多划3到4下</b>，再多颜色就会混浊。切面图可以看到两个版本并排——抹茶保持鲜亮，巧克力依然深邃。',
     ing:[
-      'Unsalted butter — 150g (½ cup + 3 Tbsp), room temperature',
-      'Granulated sugar — 190g (1 scant cup)',
-      'Lemon zest — 1 tsp, plus 1 Tbsp lemon juice',
-      'Vanilla extract — 1 tsp',
-      'Eggs — 3 large, beaten',
-      'All-purpose flour — 90g (⅔ cup), sifted',
-      'Baking powder — 1¼ tsp',
-      'Salt — ⅛ tsp',
-      'Almond flour — 110g (1 cup)',
-      'Fresh blueberries — 200g (1½ cups)',
-      '— Icing: 70g (⅔ cup) icing sugar + 1 Tbsp lemon juice'
+      'All-purpose flour — 185g (1⅓ cups + 1 Tbsp)',
+      'Baking powder — ¾ tsp',
+      'Unsalted butter — 200g (¾ cup + 2 Tbsp), room temperature',
+      'Granulated sugar — 200g (1 cup)',
+      'Salt — ½ tsp',
+      'Large eggs — 3, room temperature',
+      'Large egg yolk — 1',
+      'Sour cream — 120g (½ cup)',
+      'Vanilla extract — 1 Tbsp',
+      '— Matcha variation: 1 Tbsp matcha powder',
+      '— Chocolate variation: 3 Tbsp (15g) cocoa powder + 1 Tbsp cooled coffee',
+      '— Glazed lemon: 2 tsp zest + 1½ Tbsp lemon juice + 125g confectioners sugar'
     ],
     method:[
-      '<b>Preheat and prep</b>Heat oven to 375°F / 190°C. Grease a 9- or 8-inch loaf pan, line with a parchment sling and butter the paper.',
-      '<b>Cream butter and sugar</b>Beat butter, sugar, lemon zest and vanilla on high for 3–4 minutes until light. Lower to medium speed.',
-      '<b>Add the eggs</b>Add the beaten eggs in three additions, scraping the bowl as needed. The mix may split slightly — it will come back together once the dry ingredients go in.',
-      '<b>Mix dry ingredients</b>Whisk together flour, baking powder, salt, and almond flour in a separate bowl.',
-      '<b>Fold in dry ingredients</b>With mixer on low, add dry ingredients in three additions, mixing just until no white specks remain.',
-      '<b>Add blueberries</b>Fold in three-quarters of the blueberries by hand. Scoop batter into the prepared pan.',
-      '<b>First bake</b>Bake for 15 minutes, then scatter the remaining blueberries over the top.',
-      '<b>Continue baking</b>Return to oven for 15–20 minutes more until golden but still slightly uncooked in the centre. Cover loosely with foil and bake a further 25–30 minutes until a knife comes out clean.',
-      '<b>Cool and ice</b>Cool in pan for 10 minutes, then transfer to a rack. Once fully cool, whisk lemon juice into icing sugar until smooth and pourable. Drizzle over the cake and let set 30 minutes before slicing.'
+      '<b>Preheat and prep</b>Preheat oven to 350°F / 180°C. Lightly butter a 9×5 in (23×12 cm) loaf pan.',
+      '<b>Sift dry ingredients</b>Sift the flour and baking powder together. Set aside.',
+      '<b>Cream butter and sugar</b>Beat butter, granulated sugar, and salt on medium speed until combined and lighter in colour, about 1 minute.',
+      '<b>Add eggs</b>Add the eggs and egg yolk one at a time, mixing well after each addition until incorporated before adding the next. Scrape down the sides and bottom of the bowl.',
+      '<b>Add sour cream and vanilla</b>On medium speed, mix in the sour cream and vanilla extract.',
+      '<b>Fold in flour</b>On low speed, add half the flour mixture. Once mostly combined, add the remaining flour and mix until fully incorporated.',
+      '<b>Marble — matcha</b>Spoon two-thirds of the batter into the prepared pan. Mix sifted matcha powder into the reserved third. Spoon on top and marble slightly with an offset spatula — 3 to 4 passes only.',
+      '<b>Marble — chocolate</b>Same as matcha: reserve one-third of the plain batter, mix in sifted cocoa powder and coffee, spoon on top, marble slightly.',
+      '<b>Bake</b>Bake 45–55 minutes until the centre is set and a knife inserted into the centre comes out clean. Transfer to a wire rack and cool completely, then turn out.',
     ],
-    thinking:'Ottolenghi replaces a portion of all-purpose flour with <b>almond flour</b>, which changes the crumb dramatically — almond flour has no gluten, so it contributes fat and moisture rather than structure. The result is <b>denser and more tender</b> than a classic pound cake, with a fudgier interior. The <b>staged baking method</b> (add blueberries halfway through) means the top fruit stays plump rather than sinking and burning. The cake is at its best <b>on the day it\'s made</b>, but the lemon icing seals in moisture and buys it another day.',
-    bakes:[]
+    thinking:'The Tartine recipe departs from the classic 1:1:1:1 in one key way: <b>sour cream replaces some of the egg fat</b>, making the crumb lighter and more tender with a slight tang. The marble technique is the same whether matcha or chocolate — <b>reserve one-third of the batter, mix in the flavouring, spoon on top and swirl</b>. The critical rule: <b>3 to 4 passes with an offset spatula maximum</b>. More and the colours muddy. The cross-section in the photo shows both versions side by side — the matcha stays bright, the chocolate stays dark.',
+    bakes:[
+      { date:'March 26, 2026', photos:['./images/recipes/marble_both.jpg','./images/recipes/marble.jpg'],
+        note:'You can really see how sour cream brings tenderness to the recipe. I find this one really tasty.' }
+    ]
   },
   chocZucchini:{
     name:'Chocolate Zucchini Loaf',
@@ -4968,7 +4940,7 @@ document.addEventListener('keydown', e=>{
 });
 
 function closeCard(){
-  document.getElementById('card-overlay').classList.remove('open');
+  document.getElementById('card-overlay')?.classList.remove('open');
   document.body.style.overflow='';
 }
 function closeCardOnBg(e){
@@ -5351,5 +5323,12 @@ function renderAllGallery(){
 }
 renderAllGallery();
 </script>
+<script type="module" src="./history-book.js"></script>
+<script type="module" src="./cake-card.js"></script>
+<script type="module" src="./recipe-shelf.js"></script>
+<script type="module" src="./hand-flip.js"></script>
+<script type="module" src="./front-page.js"></script>
+<script type="module" src="./tips-page.js"></script>
+<script type="module" src="./section-transition.js"></script>
 </body>
 </html>

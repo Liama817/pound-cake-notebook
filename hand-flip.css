@@ -1,0 +1,212 @@
+/* ── HAND PAGE-TURN ─────────────────────────────────────
+   Styles for hand-flip.js: the toggle button, the camera
+   preview, and the shading drawn on a page while it turns. */
+
+/* The camera window's width in its corner */
+:root{--hf-w:clamp(200px, 19vw, 280px)}
+
+/* While hand mode is on, the open book moves left (and gets narrower only if
+   it must) so the camera window in the corner doesn't cover its pages */
+@media (min-width:601px) and (max-width:700px){
+  body.hf-on .hb-stage:not(.closed){padding-right:calc(var(--hf-w) + 2.8rem)}
+}
+@media (min-width:601px){
+  .hb-stage{transition:padding .6s ease}
+  body.hf-on .hb-book{max-width:100%}
+}
+
+/* Toggle button — sits above the cover (z 500) and the book header (z 100) */
+.hf-toggle{
+  position:fixed;right:1.4rem;bottom:1.4rem;z-index:600;
+  font-family:var(--font-body);font-size:.66rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(240,225,195,.85);
+  background:rgba(28,18,8,.72);
+  border:1px solid rgba(210,185,145,.45);
+  padding:.65rem 1.1rem;cursor:pointer;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:color .2s ease,border-color .2s ease,background .2s ease;
+}
+.hf-toggle:hover{color:#F5E6C8;border-color:rgba(226,184,74,.8)}
+.hf-toggle[aria-pressed="true"]{color:#E2B84A;border-color:rgba(226,184,74,.8)}
+.hf-toggle:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
+
+/* Camera preview card — above the recipe card (z 700), so its hints and
+   the hold ring stay visible while a recipe is open */
+.hf-panel{
+  position:fixed;right:1.4rem;bottom:4.4rem;z-index:720;
+  width:var(--hf-w);   /* large enough to see yourself and your hand */
+  background:rgba(20,12,5,.88);
+  border:1px solid rgba(210,185,145,.3);
+  box-shadow:0 12px 40px rgba(0,0,0,.55);
+  padding:.5rem;
+  display:none;
+}
+.hf-panel.open{display:block}
+.hf-stage{position:relative;width:100%;aspect-ratio:4/3;background:#0d0804;overflow:hidden}
+/* Mirror video + overlay together so it behaves like a mirror */
+.hf-stage video,.hf-stage canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;transform:scaleX(-1);
+}
+.hf-stage video{filter:sepia(.25) saturate(.8) brightness(.9)}
+.hf-status{
+  /* one gesture per line, big enough to read at a glance (and in a video) */
+  font-family:var(--font-body),'Noto Serif SC',serif;font-style:normal;
+  font-size:15px;line-height:1.45;letter-spacing:.01em;white-space:pre-line;
+  color:#F5ECD7;
+  margin:.55rem .2rem .15rem;min-height:2.9em;
+}
+.hf-privacy{
+  font-family:var(--font-body);font-size:.6rem;letter-spacing:.06em;
+  color:rgba(200,169,126,.55);margin:0 .15rem;
+}
+
+/* Live tracker readout, shown with ?debug in the URL */
+.hf-debug{
+  font-family:var(--font-mono);font-size:.62rem;line-height:1.4;
+  color:#E2B84A;margin:.35rem .15rem 0;
+}
+
+/* The fingertip on the page while pointing at the Recipes shelf */
+.hf-cursor{
+  position:fixed;left:0;top:0;z-index:730;pointer-events:none;
+  width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;
+  border:2px solid #E2B84A;background:rgba(226,184,74,.18);
+  box-shadow:0 0 0 1px rgba(255,248,230,.7), 0 2px 8px rgba(60,40,15,.35);
+  transition:width .15s ease,height .15s ease,margin .15s ease,background .15s ease;
+}
+.hf-cursor[hidden]{display:none}
+.hf-cursor.pinch{width:16px;height:16px;margin:-8px 0 0 -8px;background:#E2B84A}
+
+/* Shading laid over a page while it turns (opacity driven from JS) */
+.hf-shade{
+  position:absolute;inset:0;z-index:60;pointer-events:none;
+  opacity:0;
+}
+
+/* ── Welcome intro ── */
+
+/* "Say hi" invitation under the cover book */
+.hf-sayhi{
+  position:absolute;left:50%;bottom:3.2vh;z-index:20;
+  transform:translateX(-50%);
+  font-family:var(--font-body);font-size:.7rem;
+  letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;
+  color:#F5E6C8;background:rgba(28,18,8,.55);
+  border:1px solid rgba(226,184,74,.6);
+  padding:.75rem 1.5rem;cursor:pointer;
+  transition:background .2s ease,border-color .2s ease;
+}
+.hf-sayhi:hover{background:rgba(60,38,14,.7);border-color:#E2B84A}
+.hf-sayhi:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
+body.hf-intro .hf-sayhi,
+body.hf-intro .hf-toggle,
+body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover waits for a sweep */
+/* On the landing, "Say hi" is the way into hand mode — the corner toggle would only crowd it */
+#cover:not(.hidden) ~ .hf-toggle{display:none}
+
+/* Dims the cover while the mirror is centre stage */
+.hf-backdrop{
+  position:fixed;inset:0;z-index:590;
+  background:rgba(10,6,2,.72);
+  opacity:0;pointer-events:none;transition:opacity .6s ease;
+}
+.hf-backdrop.open{opacity:1;pointer-events:auto}
+
+/* The big mirror: the same panel, centred and enlarged */
+.hf-panel.hero{
+  inset:0;margin:auto;
+  width:min(560px,86vw);height:fit-content;
+  padding:.8rem;
+  background:#140c05;
+}
+.hf-panel.hero .hf-status{
+  /* the one thing to read here: big and upright */
+  font-size:26px;line-height:1.3;text-align:center;margin:1rem .4rem .35rem;min-height:0;
+}
+/* said once, on the front page, where people choose to start; not repeated in the window */
+.hf-privacy{display:none}
+.hf-panel.greeted{border-color:rgba(226,184,74,.85);box-shadow:0 0 0 1px rgba(226,184,74,.4),0 18px 60px rgba(0,0,0,.6)}
+.hf-panel.greeted .hf-status{color:#E2B84A}
+
+/* as the mirror becomes the print, its words fade and fold away first */
+.hf-panel.hero .hf-status,.hf-panel.hero .hf-skip{max-height:6em;overflow:hidden}
+.hf-panel.leaving .hf-status,.hf-panel.leaving .hf-skip{
+  opacity:0;max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-bottom-width:0;
+  transition:opacity .15s ease, max-height .22s ease, margin .22s ease, padding .22s ease;
+}
+
+/* Skip lives only in the big mirror */
+.hf-skip{display:none}
+.hf-panel.hero .hf-skip{
+  display:block;margin:.6rem auto .2rem;
+  font-family:var(--font-body);font-size:.62rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(200,169,126,.75);background:none;
+  border:none;border-bottom:1px solid rgba(200,169,126,.35);
+  padding:.2rem 0;cursor:pointer;
+}
+.hf-panel.hero .hf-skip:hover{color:#F5E6C8}
+
+@media (max-width:600px){
+  .hf-toggle{right:1rem;bottom:1rem;font-size:.6rem;padding:.55rem .9rem}
+  .hf-panel{right:1rem;bottom:3.8rem;width:160px}
+  .hf-status{font-size:13px}
+}
+
+/* ── Hand mode on a wide screen ──
+   The welcome: only you, in a big rounded camera window in the middle;
+   the notebook waits out of sight. After the hello, the window shrinks
+   into a small one in the bottom-right corner and the notebook glides in
+   from the left to the centre, sized so the window never covers it. Phones keep the
+   centred mirror and the window above the toggle. */
+@media (min-width:701px){
+  :root{--hf-w:clamp(180px, 15vw, 240px)}
+  /* the notebook keeps the same clear margin on both sides, so it stays centred */
+  body.hf-on,body.hf-intro{--hf-gap:calc(var(--hf-w) + 2.6rem)}
+  html body.hf-on #recipes-panel.active,
+  html body.hf-on #tips-panel.active,
+  html body.hf-on .hb-stage{padding-left:var(--hf-gap);padding-right:var(--hf-gap)}
+  body.hf-on .hb-book,body.hf-intro .hb-book{
+    width:min(calc(100vw - 2 * var(--hf-gap)), calc((100vh - 190px) * 1.484), 1180px);
+  }
+  /* the notebook stays out of sight while the camera has the stage, then glides in */
+  body.hf-intro .hb-stage.closed .hb-book{transform:translateX(calc(-25% - 22vw));opacity:0}
+  body.hf-on .hb-book,body.hf-intro .hb-book{transition:transform .9s cubic-bezier(.45,0,.2,1), opacity .6s ease}
+
+  /* dims the landing behind, but not the notebook */
+  .hf-backdrop{z-index:510;background:rgba(10,6,2,.5)}
+
+  /* the big window: clean and rounded, in the middle, the one thing on screen */
+  .hf-panel.hero{
+    inset:0;margin:auto;width:min(60vw, calc((100vh - 200px) * 4 / 3));
+    padding:0;background:none;border:0;box-shadow:none;
+  }
+  .hf-panel.greeted{border:0;box-shadow:none}
+  .hf-panel.hero .hf-stage,
+  body.hf-on .hf-panel:not(.hero) .hf-stage{
+    border-radius:4.5% / 6%;   /* in proportion, so it stays the same shape as it shrinks */
+    box-shadow:0 22px 60px rgba(0,0,0,.5);
+  }
+  .hf-panel.hero .hf-status{font-size:24px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+
+  /* the small window in the corner */
+  body.hf-on .hf-panel.open:not(.hero){
+    right:1.4rem;bottom:1.4rem;width:var(--hf-w);
+    padding:0;background:none;border:0;box-shadow:none;
+  }
+  .hf-stage video{filter:saturate(1.05) brightness(1.04)}
+  /* no words on the small window; still read out to screen readers */
+  body.hf-on .hf-panel:not(.hero) .hf-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;min-height:0}
+  /* the camera has the bottom-right corner: "Stop hand mode" moves to the left */
+  body.hf-on .hf-toggle{right:auto;left:1.4rem}
+  /* an open recipe card stays clear of the window too */
+  body.hf-on #recipe-modal{padding-left:var(--hf-gap);padding-right:var(--hf-gap)}
+  body.hf-on .rm-card{width:min(860px, calc(100vw - 2 * var(--hf-gap)))}
+}
+
+/* Phones turn pages by touch: no way into hand mode (see PHONE in hand-flip.js) */
+@media (max-width:700px){
+  .hf-toggle,.hf-sayhi,.shelf-foot .foot-hand{display:none !important}
+}

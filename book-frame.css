@@ -1,0 +1,81 @@
+/* ── BOOK FRAME ─────────────────────────────────────────
+   Recipes and Tips are laid out on the same open book as History: a cream
+   two-page spread of exactly the History book's size and place
+   (history-book.css: .hb-stage and .hb-book), with the same paper, spine
+   and shadow, on the same dark table. The spreads don't turn; moving between
+   sections slides (section-transition.css).
+   Phones show one page of the History book at a time, so there Recipes and
+   Tips keep their own single-column layouts (.bk-spread does nothing). */
+
+.bk-spread{display:contents}
+
+@media (min-width:701px){
+  /* the section fills the same box as the History book's stage */
+  #recipes-panel.active,
+  #tips-panel.active{
+    position:fixed;left:0;right:0;top:52px;bottom:24px;z-index:5;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:auto;height:auto;min-height:0;overflow:visible;background:transparent;
+  }
+  .bk-spread{
+    display:block;position:relative;box-sizing:border-box;
+    width:min(94vw, calc((100vh - 190px) * 1.484), 1180px);   /* = .hb-book */
+    aspect-ratio:1.484;min-height:0;overflow:hidden;   /* never taller than the book, whatever is on it */
+    margin-bottom:var(--bk-hint-space, 1.93rem);   /* the History book has its hint line below it */
+    container-type:inline-size;
+    color:#2C2416;
+    background:#F6EEDF;
+    background-image:
+      radial-gradient(ellipse at 15% 10%, rgba(255,255,255,.55), transparent 45%),
+      radial-gradient(ellipse at 65% 10%, rgba(255,255,255,.45), transparent 40%),
+      radial-gradient(ellipse at 40% 95%, rgba(180,140,90,.10), transparent 50%),
+      radial-gradient(ellipse at 90% 95%, rgba(180,140,90,.10), transparent 45%);
+    filter:drop-shadow(0 24px 40px rgba(0,0,0,.55));
+  }
+  /* with the camera window in the corner, move over exactly as the History book does (hand-flip.css) */
+  #recipes-panel,#tips-panel{transition:padding .6s ease}
+  body.hf-on #recipes-panel.active,
+  body.hf-on #tips-panel.active{padding-right:calc(var(--hf-w) + 2.8rem)}
+  body.hf-on .bk-spread{max-width:100%}
+
+  /* the paper curving into the spine, drawn over whatever is printed on it */
+  .bk-spread::after{
+    content:'';position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:linear-gradient(to right,
+      transparent calc(50% - 5.5cqw),
+      rgba(70,45,15,var(--spine-soft, .10)) calc(50% - 2.2cqw),
+      rgba(70,45,15,var(--spine-deep, .30)) calc(50% - .15cqw),
+      rgba(70,45,15,var(--spine-deep, .30)) calc(50% + .15cqw),
+      rgba(70,45,15,var(--spine-soft, .10)) calc(50% + 2.2cqw),
+      transparent calc(50% + 5.5cqw));
+    mix-blend-mode:multiply;
+  }
+
+  /* ── Recipes on the spread ── */
+  #recipes-panel .bk-spread{
+    --ink:#2E2418;--ink-soft:#5E4E3B;--ochre:#A0622A;--rule:rgba(94,78,59,.28);
+    --spine-soft:.035;--spine-deep:.11;   /* the fold crosses the cabinet here, so keep it faint */
+  }
+  #recipes-panel .bk-spread .shelf-wrap{
+    max-width:none;height:100%;margin:0;
+    padding:4cqw 5.5cqw 2.6cqw;
+  }
+  #recipes-panel .bk-spread .shelf-head{grid-template-columns:1fr 30cqw;gap:2cqw;margin-bottom:.8cqw}
+  #recipes-panel .bk-spread .shelf-title{font-size:6.4cqw}
+  #recipes-panel .bk-spread .shelf-count{font-size:1.05cqw;margin-bottom:.5cqw}
+  #recipes-panel .bk-spread .shelf-sub{font-size:1.55cqw}
+  #recipes-panel .bk-spread .shelf{min-height:0;margin-top:-3.2cqw}
+  #recipes-panel .bk-spread .cab-fit{max-width:100%;max-height:none}
+  #recipes-panel .bk-spread .cabinet::after{
+    background:radial-gradient(ellipse 50% 50% at center, rgba(80,55,25,.34), rgba(80,55,25,.12) 55%, rgba(80,55,25,0) 100%);
+  }
+  #recipes-panel .bk-spread .shelf-foot{padding-top:1cqw}
+  #recipes-panel .bk-spread .shelf-foot .foot-hand{font-size:1.3cqw}
+
+  /* ── Tips on the spread: the chapter title over the left page, then the
+     batter tool on the left page and storage on the right (tips-page.css) ── */
+  #tips-panel .bk-spread{
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);
+    column-gap:11cqw;padding:4.2cqw 5.5cqw 3.4cqw;
+  }
+}

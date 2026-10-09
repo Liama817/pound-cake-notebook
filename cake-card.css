@@ -1,0 +1,186 @@
+/* ── CAKE ⇄ CARD ────────────────────────────────────────
+   Styles for cake-card.js: the cake taken off the shelf and turned over into
+   its recipe card, the big gesture shown while it's held, the stamp, and the
+   gesture key on the card in hand mode. */
+
+/* the cake in flight, and the room dimming behind it */
+.cc-dim{position:fixed;inset:0;z-index:690;opacity:0;pointer-events:none;background:var(--cc-room)}
+/* the room behind a cake or card: a warm dusk, darker toward the edges (the card's backdrop too) */
+:root{--cc-room:radial-gradient(ellipse at 50% 45%, oklch(24% 0.05 55 / .8), oklch(12% 0.035 50 / .93) 75%)}
+.cc-flight{position:fixed;z-index:695;perspective:1600px;pointer-events:none}
+.cc-flip{position:absolute;inset:0;transform-style:preserve-3d}
+.cc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.cc-front img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 24px 26px rgba(0,0,0,.45))}
+/* the card's back is its front page, in miniature: the title on the left,
+   the photograph on the right, as the card will show them */
+.cc-back{
+  transform:rotateY(180deg);
+  display:grid;grid-template-columns:48% 52%;
+  background:var(--page-warm, #FAF4E6);border-radius:2px;box-shadow:0 30px 70px rgba(0,0,0,.5);overflow:hidden;
+}
+.cc-back-text{
+  display:flex;flex-direction:column;align-items:center;gap:.35em;padding:7% 8% 0;text-align:center;
+  font-family:var(--font-display, var(--font-serif)),'Noto Serif SC',serif;color:var(--ink, #2E2418);
+}
+.cc-back .cc-eyebrow{font-family:var(--font-hand, var(--font-serif));font-size:.7rem;color:var(--sienna, #A0622A);opacity:.7}
+.cc-back b{font-weight:400;font-size:clamp(1.1rem,2.6vw,1.9rem);line-height:1.06}
+.cc-back i{font-family:var(--font-lora),serif;font-size:.7rem;color:oklch(52% 0.04 58)}
+/* the text to come, as faint ruled lines */
+.cc-lines{align-self:stretch;flex:1;margin-top:8%;
+  background:repeating-linear-gradient(to bottom, rgba(94,78,59,.13) 0 2px, transparent 2px 14px) top / 100% 100% no-repeat;
+  -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent)}
+.cc-back-photo{padding:1.5%;min-height:0}
+.cc-back-photo img{width:100%;height:100%;object-fit:cover;display:block;border-radius:1px}
+
+/* the cake being pulled out by hand rises from the bottom of its plate */
+.cc-held{transform-origin:50% 85%}
+
+/* the cake's spot on the shelf, while it's away */
+.cabinet .slice.cc-taken .slice-bare{opacity:1}
+.slice.cc-taken .slice-img{opacity:0 !important;transition:none}
+.slice.cc-taken .plate-shadow{opacity:0}
+
+/* the card arrives already in place, so it skips its own entrance */
+#recipe-modal.cc-hidden{visibility:hidden}
+#recipe-modal.cc-arrived .rm-card{animation:none}
+#rm-card{position:relative}
+
+/* ── the stamp: a postage stamp in the photo's corner, postmarked with the day ── */
+.cc-tag{
+  position:absolute;z-index:40;right:44px;top:34px;width:124px;height:153px;
+  rotate:6deg;pointer-events:none;
+}
+.cc-tag[hidden]{display:none}
+/* the paper, with its perforated edge (the mask is made in cake-card.js); the
+   shadow is on a wrapper, since a mask would cut a shadow of its own away */
+.cc-sheet{position:absolute;inset:0;filter:drop-shadow(0 3px 4px rgba(40,25,10,.35))}
+.cc-paper{position:absolute;inset:0;background:#FFFDF7;
+  -webkit-mask:var(--perf) 0 0/100% 100% no-repeat;mask:var(--perf) 0 0/100% 100% no-repeat}
+/* the stamp's face: a tinted frame with the picture, what it means, and when */
+.cc-ink{
+  position:absolute;inset:11px;display:none;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 6px;
+  border:.8px solid currentColor;
+  font-family:var(--font-serif),'Noto Serif SC',serif;line-height:1.1;text-align:center;
+}
+.cc-ink.made,.cc-ink.wish{display:flex}
+.cc-ink.made{color:#4F6B3A;background:#EEF3E4}
+.cc-ink.wish{color:#B0463A;background:#FBEAE6}
+.cc-ink b{font-weight:600;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.cc-ink.wish b{letter-spacing:.05em}   /* the longer words still fit on one line */
+.cc-ink img{flex:1;min-height:0;width:88%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(60,35,10,.18))}
+.cc-ink i{font-family:var(--font-lora),'Noto Serif SC',serif;font-size:11.5px;white-space:nowrap}
+/* the postmark: rubber-stamp ink over the stamp's edge and the photo */
+.cc-postmark{
+  position:absolute;left:-32px;top:40px;width:110px;height:110px;rotate:-14deg;display:none;overflow:visible;
+  mix-blend-mode:multiply;opacity:.92;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size:150px;mask-size:150px;
+}
+.cc-ink.made ~ .cc-postmark,.cc-ink.wish ~ .cc-postmark{display:block}
+.cc-ink.made ~ .cc-postmark{color:#4F6B3A}
+.cc-ink.wish ~ .cc-postmark{color:#B0463A}
+.cc-postmark text{fill:currentColor;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:600;font-size:10px;letter-spacing:1.2px}
+.cc-postmark .pm-day{font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-weight:400;font-size:12px;letter-spacing:0}
+
+/* the little burst of painted stickers as the stamp lands: each pops up
+   with a squash, then floats away swaying, like a balloon let go */
+.cc-burst{
+  position:fixed;z-index:760;pointer-events:none;translate:-50% -50%;
+  width:calc(62px * var(--s, 1) * var(--k, 1));height:calc(62px * var(--s, 1) * var(--k, 1));
+  background:center/contain no-repeat;
+  filter:drop-shadow(0 3px 4px rgba(60,35,10,.22));
+  opacity:0;animation:cc-burst 1.9s linear both;
+}
+.cc-burst.thumbs{background-image:url("./images/stamp/thumbs.png");background-image:-webkit-image-set(url("./images/stamp/thumbs.png") 1x, url("./images/stamp/thumbs@2x.png") 2x)}
+.cc-burst.heart{background-image:url("./images/stamp/heart.png");background-image:-webkit-image-set(url("./images/stamp/heart.png") 1x, url("./images/stamp/heart@2x.png") 2x)}
+.cc-burst.cookie{background-image:url("./images/stamp/cookie.png");background-image:-webkit-image-set(url("./images/stamp/cookie.png") 1x, url("./images/stamp/cookie@2x.png") 2x)}
+@keyframes cc-burst{
+  0%  {opacity:0;transform:translate(0,12px) rotate(0deg) scale(.2,.2);animation-timing-function:cubic-bezier(.2,.8,.4,1)}
+  13% {opacity:1;transform:translate(calc(var(--dx) * .2),-22px) rotate(var(--r)) scale(1.18,1.1);animation-timing-function:ease-in-out}
+  20% {transform:translate(calc(var(--dx) * .28),-26px) rotate(var(--r)) scale(.9,1.04);animation-timing-function:ease-in-out}
+  28% {transform:translate(calc(var(--dx) * .34),-32px) rotate(var(--r)) scale(1,1);animation-timing-function:ease-in-out}
+  50% {transform:translate(calc(var(--dx) * .62 + 6px),-62px) rotate(calc(var(--r) * -.6)) scale(1,1);animation-timing-function:ease-in-out}
+  72% {opacity:1;transform:translate(calc(var(--dx) * .82 - 6px),-94px) rotate(calc(var(--r) * .5)) scale(.96,.96);animation-timing-function:ease-in}
+  100%{opacity:0;transform:translate(var(--dx),-122px) rotate(calc(var(--r) * -.3)) scale(.85,.85)}
+}
+/* the mitt is tall and narrow, so it's drawn bigger to look as big as a heart */
+.cc-burst.thumbs{--k:1.3}
+@media (max-width:700px){ .cc-burst{width:calc(40px * var(--s, 1) * var(--k, 1));height:calc(40px * var(--s, 1) * var(--k, 1))} }
+
+/* ── the gesture key, in hand mode: a cream paper strip at the card's foot ── */
+.cc-key{display:none}
+body.hf-on .cc-key{
+  position:absolute;z-index:30;left:50%;bottom:14px;translate:-50% 0;
+  display:flex;gap:4px;pointer-events:none;
+  background:#FBF6EA;border:1px solid rgba(94,78,59,.2);border-radius:3px;padding:6px 10px;
+  box-shadow:0 4px 12px rgba(40,25,10,.18);
+}
+.cc-key > span{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:0 10px;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:15px;color:#5E4E3B;
+}
+.cc-key > span + span{border-left:1px solid rgba(94,78,59,.2)}
+.cc-glyph{width:24px;height:24px;display:block}
+/* the text scrolls clear of the key */
+body.hf-on #rm-card .rm-body-scroll{padding-bottom:58px}
+@media (max-width:700px){
+  body.hf-on .cc-key{flex-direction:column;align-items:center;gap:2px;bottom:10px}
+  .cc-key > span{font-size:13px}
+  body.hf-on #rm-card .rm-body-scroll{padding-bottom:104px}
+  .cc-glyph{width:20px;height:20px}
+  .cc-key > span + span{border-left:0}
+  .cc-tag{right:18px;top:18px;width:84px;height:104px}
+  .cc-ink{inset:7px;padding:4px 2px}
+  .cc-ink b{font-size:7.5px;letter-spacing:.1em}
+  .cc-ink i{font-size:8.5px}
+  .cc-postmark{left:-22px;top:26px;width:76px;height:76px}
+}
+
+/* ── pointing by hand at the shelf: the oven mitt, and a paper tag ── */
+/* the mitt's fingertip is the point (38, 14 in its 96px picture) */
+.hf-cursor{
+  width:96px !important;height:96px !important;margin:-14px 0 0 -38px !important;
+  border:0 !important;border-radius:0 !important;box-shadow:none !important;
+  background:url("./images/cursor/mitt.png") center/contain no-repeat !important;
+  background-image:-webkit-image-set(url("./images/cursor/mitt.png") 1x, url("./images/cursor/mitt@2x.png") 2x) !important;
+  filter:drop-shadow(0 10px 10px rgba(60,35,10,.3));
+  transform-origin:38px 14px;
+  /* the camera sees the hand 15–30 times a second: glide between the frames */
+  transition:opacity .35s ease, scale .18s ease, rotate .18s ease, translate .09s linear;
+}
+.hf-cursor.point{scale:1.06}
+@media (min-width:1200px){ .hf-cursor:not(.pinch){scale:1.18} .hf-cursor.point{scale:1.26} }
+/* hand mode on a wide screen (hand-flip.css): the mitt 1.3× bigger, its fingertip still the point */
+@media (min-width:701px){
+  body.hf-on .hf-cursor{width:124px !important;height:124px !important;margin:-18px 0 0 -49px !important;transform-origin:49px 18px}
+  body.hf-on .cc-nametag{font-size:20px;padding:8px 16px 9px 28px}
+}
+/* a pinch: the mitt squeezes */
+.hf-cursor.pinch{scale:.86;rotate:6deg}
+/* no hand in view: the mitt waits where it was, faded, breathing */
+.hf-cursor.parked{opacity:.5;animation:cc-breathe 2.4s ease-in-out infinite}
+@keyframes cc-breathe{50%{transform:translateY(-5px)}}   /* translate is its position */
+.cc-nametag{
+  position:fixed;z-index:725;translate:-50% 0;rotate:-2deg;pointer-events:none;
+  background:#FBF6EA;color:#5E4E3B;border:1px solid rgba(94,78,59,.25);border-radius:3px;
+  padding:6px 13px 7px 22px;white-space:nowrap;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:15px;line-height:1.2;
+  box-shadow:0 3px 8px rgba(60,40,15,.18);
+  animation:cc-swing .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% -12px;
+}
+/* the tag hangs from the cake's label on a string, through a little eyelet */
+.cc-nametag::before{content:'';position:absolute;left:50%;top:-12px;width:1px;height:12px;background:rgba(94,78,59,.55)}
+.cc-nametag::after{content:'';position:absolute;left:8px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;border:1px solid rgba(94,78,59,.5);background:#fff}
+.cc-nametag[hidden]{display:none}
+/* while a cake is being pulled out, the tag fills with honey from the left */
+@property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
+.cc-nametag.pulling{
+  background:linear-gradient(90deg, rgba(226,184,74,.5) var(--p), transparent var(--p)) #FBF6EA;
+  transition:--p .18s linear;
+}
+@keyframes cc-swing{from{opacity:0;rotate:-14deg}to{opacity:1;rotate:-2deg}}
+
+@media (prefers-reduced-motion:reduce){
+  .cc-nametag,.hf-cursor.parked{animation:none}
+  .cc-burst{display:none}
+}

@@ -1,0 +1,137 @@
+/* ── TIPS PAGE ──────────────────────────────────────────
+   Styles for tips-page.js. On wider screens the Tips are printed on the open
+   book (book-frame.css lays out the spread): a small chapter name over the
+   left page, then one headline per page saying the point — "One egg at a
+   time." over a big drag-to-compare print of the batter, and "How long will
+   it keep?" over the answer, set large. Sizes there are shares of the book's
+   width (cqw), so the spread scales as one.
+   Phones stack the two as cream pages under the chapter name. */
+
+.tp{--tp-ink:#2E2418;--tp-soft:#5E4E3B;--tp-ochre:#A0622A;--tp-good:#4d6e36;--tp-bad:#a34a34;--tp-rule:rgba(94,78,59,.25)}
+
+.tp-chapter{
+  margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:300;line-height:1;letter-spacing:.02em;
+  color:var(--tp-ochre);
+}
+.tp-page{display:flex;flex-direction:column;min-height:0;color:var(--tp-ink)}
+/* the headlines say the point */
+.tp-title{
+  margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:400;line-height:.96;letter-spacing:-.01em;
+  color:var(--tp-ink);
+}
+.tp-title em{font-style:italic;color:var(--tp-ochre)}
+.tp-how{margin:0;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;line-height:1.4;color:var(--tp-soft)}
+
+/* ── One egg at a time ── */
+/* a print in a white mount, like History's photographs */
+.tp-print{
+  align-self:center;margin:0;background:#FFFDF8;
+  box-shadow:0 .25rem .8rem rgba(60,40,15,.22), 0 0 0 1px rgba(94,78,59,.12);
+  transform:rotate(-.6deg);
+}
+.tp-split{
+  --pos:50%;
+  position:relative;aspect-ratio:1;overflow:hidden;
+  cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.tp-split:focus-visible{outline:2px solid var(--tp-ochre);outline-offset:4px}
+/* the paintings leave a wide border around the bowl; trim it, never the bowl.
+   (The photos are drawn larger rather than scaled, so the curdled one's cut
+   edge stays exactly under the line wherever it is dragged.) */
+.tp-split img{position:absolute;left:-17.5%;top:-17.5%;width:135%;height:135%;max-width:none;object-fit:cover;pointer-events:none}
+.tp-bad{position:absolute;inset:0;overflow:hidden;clip-path:inset(0 0 0 var(--pos))}
+.tp-bar{
+  position:absolute;top:0;bottom:0;left:var(--pos);width:2px;margin-left:-1px;
+  background:#FFFDF8;box-shadow:0 0 6px rgba(0,0,0,.25);pointer-events:none;
+}
+.tp-knob{
+  position:absolute;top:50%;left:var(--pos);translate:-50% -50%;
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:#FFFDF8;color:var(--tp-ochre);box-shadow:0 2px 8px rgba(0,0,0,.3);
+  pointer-events:none;transition:scale .15s ease;
+}
+.tp-split:hover .tp-knob,.tp-split.dragging .tp-knob{scale:1.12}
+.tp-tag{
+  position:absolute;top:0;background:rgba(255,253,248,.92);white-space:nowrap;
+  font-family:var(--font-body),'Noto Serif SC',serif;letter-spacing:.16em;text-transform:uppercase;
+  pointer-events:none;transition:opacity .2s ease;
+}
+.tp-tag-good{left:0;color:var(--tp-good)}
+.tp-tag-bad{right:0;color:var(--tp-bad)}
+.tp-split.good-hidden .tp-tag-good,.tp-split.bad-hidden .tp-tag-bad{opacity:0}
+.tp-hint{text-align:center;font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;color:var(--tp-soft)}
+
+/* ── How long will it keep? ── */
+.tp-sentence{margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;line-height:1.5;color:var(--tp-ink)}
+.tp-clause{display:block}
+.tp-zh .tp-clause{display:inline;white-space:nowrap}
+/* the blanks: a real <select> each, dressed as an underlined word */
+.tp-blank{
+  -webkit-appearance:none;appearance:none;
+  border:0;border-bottom:1.5px dotted var(--tp-ochre);border-radius:0;
+  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23A0622A'/%3E%3C/svg%3E") no-repeat right .1em center / .42em auto;
+  padding:0 .75em 0 .1em;margin:0;
+  font:inherit;font-style:italic;color:var(--tp-ochre);
+  cursor:pointer;max-width:100%;
+}
+.tp-blank:hover{border-bottom-style:solid}
+.tp-blank:focus-visible{outline:2px solid var(--tp-ochre);outline-offset:2px}
+.tp-blank option{font-style:normal;color:#2E2418}
+/* the answer: how long, set large, and how to store it */
+.tp-keeps{margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:300;line-height:.9;letter-spacing:-.02em;color:var(--tp-ink)}
+.tp-keeps small{display:block;font-weight:400;letter-spacing:0;font-style:italic;line-height:1.25;color:var(--tp-ochre)}
+.tp-answer{margin:0;border-top:1px solid var(--tp-rule);display:grid;grid-template-columns:auto 1fr;align-items:baseline}
+.tp-answer dt{
+  font-family:var(--font-body),'Noto Serif SC',serif;letter-spacing:.18em;text-transform:uppercase;color:var(--tp-ochre);
+}
+.tp-answer dd{margin:0;font-family:var(--font-serif),'Noto Serif SC',serif;line-height:1.35;color:var(--tp-ink)}
+
+/* ── On the open book ── */
+@media (min-width:701px){
+  .tp-chapter{grid-column:1;grid-row:1;font-size:2.6cqw}
+  .tp-batter{grid-column:1;grid-row:2;padding-top:2.2cqw}
+  .tp-store{grid-column:2;grid-row:2;padding-top:2.2cqw}
+  .tp-title{font-size:5.6cqw}
+  .tp-how{margin-top:1.2cqw;font-size:max(.8rem,1.35cqw);max-width:34cqw}
+
+  .tp-compare{margin-top:3cqw;padding:.6cqw;box-shadow:0 .25cqw .8cqw rgba(60,40,15,.22), 0 0 0 1px rgba(94,78,59,.12)}
+  .tp-split{width:34cqw}
+  .tp-knob{width:3.4cqw;height:3.4cqw;font-size:1.4cqw}
+  .tp-tag{margin:1.2cqw;padding:.25cqw .7cqw;font-size:max(.6rem,.95cqw)}
+  .tp-hint{margin-top:1.1cqw;font-size:max(.75rem,1.15cqw)}
+
+  .tp-sentence{margin-top:3cqw;font-size:max(1rem,2.4cqw)}
+  .tp-keeps{margin-top:4.4cqw;font-size:10.5cqw}
+  .tp-keeps small{margin-top:1.4cqw;font-size:max(1rem,2.1cqw)}
+  .tp-answer{margin-top:3.4cqw;padding-top:2.2cqw;column-gap:2cqw;row-gap:1.6cqw}
+  .tp-answer dt{font-size:max(.62rem,.95cqw)}
+  .tp-answer dd{font-size:max(.85rem,1.8cqw)}
+}
+
+/* ── Phones: the chapter name, then each tip on its own cream page ── */
+@media (max-width:700px){
+  #tips-panel{height:auto;min-height:calc(100vh - 56px);overflow:visible;padding:1.6rem 1rem 5.5rem;gap:1.1rem}
+  .tp-chapter{font-size:1.6rem;color:#E2B84A;padding:0 .3rem}
+  .tp-page{
+    background:#F6EEDF;padding:1.6rem 1.3rem 1.8rem;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+  .tp-title{font-size:2.6rem}
+  .tp-how{margin-top:.7rem;font-size:.92rem}
+  .tp-compare{margin-top:1.4rem;padding:.4rem}
+  .tp-split{width:min(78vw,340px)}
+  .tp-knob{width:2.4rem;height:2.4rem;font-size:1rem}
+  .tp-tag{margin:.6rem;padding:.15rem .45rem;font-size:.6rem}
+  .tp-hint{margin-top:.7rem;font-size:.82rem}
+  .tp-sentence{margin-top:1.2rem;font-size:1.25rem}
+  .tp-clause{display:inline}
+  .tp-keeps{margin-top:1.6rem;font-size:4.2rem}
+  .tp-keeps small{margin-top:.5rem;font-size:1.05rem}
+  .tp-answer{margin-top:1.4rem;padding-top:1rem;column-gap:1rem;row-gap:.7rem}
+  .tp-answer dt{font-size:.62rem}
+  .tp-answer dd{font-size:1rem}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .tp-knob,.tp-tag{transition:none}
+}

@@ -1,0 +1,61 @@
+/* ── FRONT PAGE ─────────────────────────────────────────
+   Styles for front-page.js: the title page over everything, until Start. */
+
+.fp{
+  position:fixed;inset:0;z-index:900;
+  display:grid;grid-template-columns:1fr auto;align-items:end;gap:2rem;
+  padding:clamp(1.6rem,6vh,4.5rem) clamp(1.6rem,4.5vw,4.5rem);
+  background:#120C06;
+  background-image:
+    radial-gradient(ellipse at 30% 35%,rgba(90,56,22,.32) 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 100%,rgba(60,36,14,.35) 0%,transparent 55%);
+  color:#F5ECD7;
+  transition:opacity .6s ease;
+  /* the orange pound cake from the Recipes shelf, on its plate, for a pointer;
+     it points from the middle of the cake */
+  cursor:url("./images/cursor/cake.png") 30 20, auto;
+  cursor:-webkit-image-set(url("./images/cursor/cake.png") 1x, url("./images/cursor/cake@2x.png") 2x) 30 20, auto;
+}
+.fp button{cursor:inherit}
+.fp.leaving{opacity:0;pointer-events:none}
+/* while it shows, nothing behind it competes */
+body.fp-showing .hf-toggle,
+body.fp-showing .hf-sayhi{visibility:hidden}
+
+.fp-title{
+  margin:0;max-width:11em;
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:400;
+  font-size:clamp(3rem,7.5vw,6.6rem);line-height:.95;letter-spacing:-.01em;
+}
+.fp-by{
+  margin:.5rem 0 0 .2rem;
+  font-family:'Pinyon Script',var(--font-serif),cursive;font-size:clamp(1.8rem,3.2vw,2.7rem);line-height:1;
+  color:#E2B84A;
+}
+.fp-note{
+  margin:2rem 0 0;max-width:36em;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:1.1rem;line-height:1.5;color:rgba(240,225,195,.78);
+}
+.fp-start{
+  margin-top:1.6rem;
+  font-family:var(--font-body),'Noto Serif SC',serif;font-size:1.05rem;letter-spacing:.16em;text-transform:uppercase;
+  color:#1C1208;background:#E2B84A;border:0;padding:1rem 2.6rem;cursor:pointer;
+  transition:background .2s ease, transform .2s ease;
+}
+.fp-start:hover{background:#F0CB6A}
+.fp-start:active{transform:translateY(1px)}
+.fp-start:focus-visible{outline:2px solid #F5ECD7;outline-offset:4px}
+
+.fp-lang{
+  position:absolute;top:clamp(1rem,3vh,1.6rem);right:clamp(1.6rem,4.5vw,4.5rem);
+  font-family:var(--font-body);font-size:.66rem;letter-spacing:.12em;
+  color:rgba(220,195,150,.7);background:none;border:1px solid rgba(220,195,150,.35);padding:.35rem .6rem;cursor:pointer;
+}
+.fp-lang:hover{color:#F5ECD7}
+
+@media (max-width:700px){
+  .fp{grid-template-columns:1fr;align-content:end}
+}
+@media (prefers-reduced-motion:reduce){
+  .fp{transition:none}
+}
