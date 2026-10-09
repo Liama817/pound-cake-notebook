@@ -46,15 +46,6 @@ body.fp-showing .hf-sayhi{visibility:hidden}
 .fp-start:active{transform:translateY(1px)}
 .fp-start:focus-visible{outline:2px solid #F5ECD7;outline-offset:4px}
 
-/* The hand gestures, set like a key */
-.fp-keys{margin:0;display:grid;gap:.75rem;justify-items:end}
-.fp-keys div{display:flex;align-items:center;gap:.8rem}
-.fp-keys dt{
-  font-family:var(--font-body),'Noto Serif SC',serif;font-size:.78rem;letter-spacing:.08em;
-  color:#1C1208;background:rgba(226,184,74,.88);padding:.22rem .55rem;border-radius:2px;
-}
-.fp-keys dd{margin:0;font-family:var(--font-body),'Noto Serif SC',serif;font-size:.98rem;color:rgba(240,225,195,.72)}
-
 .fp-lang{
   position:absolute;top:clamp(1rem,3vh,1.6rem);right:clamp(1.6rem,4.5vw,4.5rem);
   font-family:var(--font-body);font-size:.66rem;letter-spacing:.12em;
@@ -64,7 +55,6 @@ body.fp-showing .hf-sayhi{visibility:hidden}
 
 @media (max-width:700px){
   .fp{grid-template-columns:1fr;align-content:end}
-  .fp-keys{justify-items:start}
 }
 @media (prefers-reduced-motion:reduce){
   .fp{transition:none}

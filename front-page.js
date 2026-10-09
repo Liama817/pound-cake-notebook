@@ -15,39 +15,16 @@ Object.assign(T.en, {
   'front.by': 'by Lia',
   'front.note': 'Uses your camera, so you can turn the pages by hand. Video stays on your device.',
   'front.start': 'Start',
-  'front.wave': 'open the notebook',
-  'front.sweep': 'turn a page',
-  'front.pinch': 'open a recipe',
-  'front.palm': 'close it again',
-  'front.waveKey': 'wave',
-  'front.sweepKey': 'sweep',
-  'front.pinchKey': 'point + pinch',
-  'front.palmKey': 'hold a palm',
 });
 Object.assign(T.zh, {
   'front.title': '磅蛋糕笔记',
   'front.by': 'by Lia',
   'front.note': '会使用你的摄像头，让你用手翻页。视频只在你的设备上处理。',
   'front.start': '开始',
-  'front.wave': '打开笔记本',
-  'front.sweep': '翻一页',
-  'front.pinch': '打开一份食谱',
-  'front.palm': '再合上',
-  'front.waveKey': '挥手',
-  'front.sweepKey': '划动',
-  'front.pinchKey': '指向 + 捏合',
-  'front.palmKey': '张开手掌停住',
 });
 
 const FADE_MS = 600;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const KEYS = [
-  ['front.waveKey', 'front.wave'],
-  ['front.sweepKey', 'front.sweep'],
-  ['front.pinchKey', 'front.pinch'],
-  ['front.palmKey', 'front.palm'],
-];
 
 const front = document.createElement('section');
 front.className = 'fp';
@@ -59,10 +36,7 @@ front.innerHTML = `
     <p class="fp-by" data-i18n="front.by">${t('front.by')}</p>
     <p class="fp-note" data-i18n="front.note">${t('front.note')}</p>
     <button class="fp-start" type="button" data-i18n="front.start">${t('front.start')}</button>
-  </div>
-  <dl class="fp-keys">
-    ${KEYS.map(([k, v]) => `<div><dt data-i18n="${k}">${t(k)}</dt><dd data-i18n="${v}">${t(v)}</dd></div>`).join('')}
-  </dl>`;
+  </div>`;
 document.body.appendChild(front);
 document.body.classList.add('fp-showing');
 

@@ -37,8 +37,6 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
 const modal = document.getElementById('recipe-modal');
 const card = document.getElementById('rm-card');
 const nameOf = id => t('recipe.' + id) || RJ[id]?.name || '';
-const sourceOf = id => (currentLang === 'zh' && RJ[id]?.zh_source) || RJ[id]?.source || '';
-const GESTURE = { made:'👍', wish:'🫶', close:'✋' };
 
 // ── Cake ⇄ card ─────────────────────────────────────────────
 
@@ -84,26 +82,41 @@ function pull(btn, p){
   pulled.dim.style.opacity = String(.35 * e);
 }
 
-function flight(id, src, rect, flipped){
+// The flying cake, with the recipe card on its back. The back is a copy of
+// the real card (as laid out now), drawn at the card's size and scaled to
+// the face as it flies, so the card turns over already written, and what's
+// on screen the moment it lands is exactly the card.
+function flight(src, rect, cardRect, flipped){
   const fl = document.createElement('div');
   fl.className = 'cc-flight';
   fl.innerHTML = `
     <div class="cc-flip"${flipped ? ' style="transform:rotateY(180deg)"' : ''}>
       <div class="cc-face cc-front"><img src="${src}" alt=""></div>
-      <div class="cc-face cc-back">
-        <div class="cc-back-text"><span class="cc-eyebrow">pound cake</span><b></b><i></i><span class="cc-lines"></span></div>
-        <div class="cc-back-photo"><img alt=""></div>
-      </div>
+      <div class="cc-face cc-back"></div>
     </div>`;
-  fl.querySelector('.cc-back b').textContent = nameOf(id);
-  fl.querySelector('.cc-back i').textContent = sourceOf(id);
-  fl.querySelector('.cc-back-photo img').src = RJ[id]?.photo || '';
+  const copy = card.cloneNode(true);
+  copy.removeAttribute('id');
+  copy.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  copy.setAttribute('aria-hidden', 'true');
+  copy.classList.add('cc-copy');
+  Object.assign(copy.style, { width:cardRect.width + 'px', height:cardRect.height + 'px', scale:'' });
+  fl.querySelector('.cc-back').appendChild(copy);
   place(fl, rect);
   const dim = document.createElement('div');
   dim.className = 'cc-dim';
   document.body.append(dim, fl);
+  // the card text where it was scrolled to
+  const from = card.querySelector('.rm-body-scroll'), to = copy.querySelector('.rm-body-scroll');
+  if(from && to) to.scrollTop = from.scrollTop;
+  const fit = () => {
+    if(!fl.isConnected) return;
+    copy.style.transform = `scale(${fl.clientWidth / cardRect.width}, ${fl.clientHeight / cardRect.height})`;
+    requestAnimationFrame(fit);
+  };
+  fit();
   return { fl, flip: fl.firstElementChild, dim };
 }
+const cardSize = () => ({ width:card.offsetWidth, height:card.offsetHeight });   // as laid out, before any scale
 const box = r => ({ left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px' });
 function place(el, r){ Object.assign(el.style, box(r)); }
 const rectOf = el => { const r = el.getBoundingClientRect(); return { left:r.left, top:r.top, width:r.width, height:r.height }; };
@@ -141,12 +154,13 @@ async function open(btn, id, reveal){
   const wasPulled = pulled && pulled.img === img ? pulled : null;
   const from = rectOf(wasPulled ? wasPulled.fl : img);
   // open the card unseen to learn where it will be
-  modal.classList.add('cc-hidden');
+  // (without its own entrance, which would move it while it's measured)
+  modal.classList.add('cc-hidden', 'cc-arrived');
   reveal();
   const to = rectOf(card);
   const lifted = { ...from, top: from.top - from.height * .3 };
   const mid = middle(from, to);
-  const { fl, flip, dim } = flight(id, img.currentSrc || img.src, from, false);
+  const { fl, flip, dim } = flight(img.currentSrc || img.src, from, cardSize(), false);
   btn.classList.add('cc-taken');   // the spot on the shelf is left bare
   const dimFrom = wasPulled ? .35 : 0;
   if(wasPulled){ pulled = null; wasPulled.dim.remove(); wasPulled.fl.remove(); }
@@ -166,9 +180,8 @@ async function open(btn, id, reveal){
     dim.animate([{ opacity:dimFrom }, { opacity:1, offset:.45 }, { opacity:1 }], { duration:ms, fill:'forwards' }),
   ];
   await Promise.all(anims.map(a => a.finished));
-  modal.classList.add('cc-arrived');      // the card is already in place: no entrance of its own
+  // the card is already in place, and the room as dim: swap them in one frame
   modal.classList.remove('cc-hidden');
-  await fl.animate([{ opacity:1 }, { opacity:0 }], { duration:140, fill:'forwards' }).finished;
   fl.remove(); dim.remove();
 }
 
@@ -184,7 +197,7 @@ async function close(btn, id, hide){
   // just above its plate, to come down onto it softly
   const above = { ...to, top: to.top - to.height * .12 };
   const back = { ...from, left: from.left + from.width * .02, top: from.top + from.height * .02, width: from.width * .96, height: from.height * .96 };
-  const { fl, flip, dim } = flight(id, img.currentSrc || img.src, from, true);
+  const { fl, flip, dim } = flight(img.currentSrc || img.src, from, cardSize(), true);
   // The reverse of opening, unhurried: the card eases back, turns over into
   // the cake held in front of you, rests a moment, then glides home and
   // settles onto its plate. Each step eases on its own, so none of it rushes.
@@ -374,7 +387,7 @@ function hold(kind, progress = 0){
 const key = document.createElement('div');
 key.className = 'cc-key';
 key.innerHTML = ['made', 'wish', 'close'].map(k =>
-  `<span><b aria-hidden="true">${GESTURE[k]}</b><span data-i18n="cc.key.${k}">${t('cc.key.' + k)}</span></span>`).join('');
+  `<span><img class="cc-glyph" src="images/glyph/${k}.png" srcset="images/glyph/${k}@2x.png 2x" alt=""><span data-i18n="cc.key.${k}">${t('cc.key.' + k)}</span></span>`).join('');   // painted hands, like the notebook
 card.appendChild(key);
 
 // Opening a card shows its stamp; closing it clears what the hand left.
