@@ -7,8 +7,10 @@
 
 /* While hand mode is on, the open book moves left (and gets narrower only if
    it must) so the camera window in the corner doesn't cover its pages */
-@media (min-width:601px){
+@media (min-width:601px) and (max-width:700px){
   body.hf-on .hb-stage:not(.closed){padding-right:calc(var(--hf-w) + 2.8rem)}
+}
+@media (min-width:601px){
   .hb-stage{transition:padding .6s ease}
   body.hf-on .hb-book{max-width:100%}
 }
@@ -99,7 +101,8 @@
 .hf-sayhi:hover{background:rgba(60,38,14,.7);border-color:#E2B84A}
 .hf-sayhi:focus-visible{outline:2px solid #E2B84A;outline-offset:3px}
 body.hf-intro .hf-sayhi,
-body.hf-intro .hf-toggle{visibility:hidden}
+body.hf-intro .hf-toggle,
+body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover waits for a sweep */
 /* On the landing, "Say hi" is the way into hand mode — the corner toggle would only crowd it */
 #cover:not(.hidden) ~ .hf-toggle{display:none}
 
@@ -153,33 +156,51 @@ body.hf-intro .hf-toggle{visibility:hidden}
 }
 
 /* ── Hand mode on a wide screen ──
-   Made to be filmed: the camera is a large photo-booth print taped beside
-   the page. Phones keep the small window in the corner. */
+   The welcome: a big rounded camera window on the right, the closed
+   notebook waiting at the left edge. After the hello, the window shrinks
+   into a small one in the bottom-right corner and the notebook glides to
+   the centre, sized so the window never covers it. Phones keep the
+   centred mirror and the window above the toggle. */
 @media (min-width:701px){
-  body.hf-on{--hf-w:36vw}
-  /* the page keeps a margin on its left too, and a clear gap before the print;
-     the closed cover makes room as soon as hand mode starts (behind the big
-     mirror), so nothing in the book changes size while the welcome plays */
-  /* (html: book-frame.css loads later and sets the narrower corner-window gap) */
+  :root{--hf-w:clamp(180px, 15vw, 240px)}
+  /* the notebook keeps the same clear margin on both sides, so it stays centred */
+  body.hf-on,body.hf-intro{--hf-gap:calc(var(--hf-w) + 2.6rem)}
   html body.hf-on #recipes-panel.active,
   html body.hf-on #tips-panel.active,
-  html body.hf-on .hb-stage:not(.closed),
-  html body.hf-on .hb-stage.closed{padding-left:2.4rem;padding-right:calc(var(--hf-w) + 4.6rem)}
-  /* the print: a warm, bright picture of you, with your hand drawn on */
+  html body.hf-on .hb-stage{padding-left:var(--hf-gap);padding-right:var(--hf-gap)}
+  body.hf-on .hb-book,body.hf-intro .hb-book{
+    width:min(calc(100vw - 2 * var(--hf-gap)), calc((100vh - 190px) * 1.484), 1180px);
+  }
+  /* the closed cover peeks in from the left while the camera has the stage */
+  body.hf-intro .hb-stage.closed .hb-book{transform:translateX(calc(-50% - 28vw))}
+
+  /* dims the landing behind, but not the notebook */
+  .hf-backdrop{z-index:510;background:rgba(10,6,2,.5)}
+
+  /* the big window: clean and rounded, right of centre */
+  .hf-panel.hero{
+    inset:0 5vw 0 auto;margin:auto 0;width:46vw;
+    padding:0;background:none;border:0;box-shadow:none;
+  }
+  .hf-panel.greeted{border:0;box-shadow:none}
+  .hf-panel.hero .hf-stage,
+  body.hf-on .hf-panel:not(.hero) .hf-stage{
+    border-radius:4.5% / 6%;   /* in proportion, so it stays the same shape as it shrinks */
+    box-shadow:0 22px 60px rgba(0,0,0,.5);
+  }
+  .hf-panel.hero .hf-status{font-size:24px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+
+  /* the small window in the corner */
   body.hf-on .hf-panel.open:not(.hero){
-    top:50%;bottom:auto;right:2.2rem;width:var(--hf-w);
-    transform:translateY(-50%) rotate(1.2deg);transform-origin:0 0;   /* the same origin the shrink into place uses */
-    background:#FBF6EA;border:0;padding:12px 12px 14px;
-    box-shadow:0 18px 50px rgba(0,0,0,.55);
+    right:1.4rem;bottom:1.4rem;width:var(--hf-w);
+    padding:0;background:none;border:0;box-shadow:none;
   }
-  body.hf-on .hf-panel.open:not(.hero)::before{
-    content:'';position:absolute;left:50%;top:-12px;width:110px;height:26px;margin-left:-55px;
-    background:rgba(226,184,74,.6);transform:rotate(-3deg);
-  }
-  body.hf-on .hf-panel:not(.hero) .hf-stage video{filter:sepia(.1) saturate(1.05) brightness(1.06)}
-  /* no words on the print; still read out to screen readers */
+  .hf-stage video{filter:saturate(1.05) brightness(1.04)}
+  /* no words on the small window; still read out to screen readers */
   body.hf-on .hf-panel:not(.hero) .hf-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;min-height:0}
-  /* an open recipe card sits beside the print, not under it */
-  body.hf-on #recipe-modal{padding-right:calc(var(--hf-w) + 4.4rem)}
-  body.hf-on .rm-card{width:min(860px, calc(100vw - var(--hf-w) - 7rem))}
+  /* the camera has the bottom-right corner: "Stop hand mode" moves to the left */
+  body.hf-on .hf-toggle{right:auto;left:1.4rem}
+  /* an open recipe card stays clear of the window too */
+  body.hf-on #recipe-modal{padding-left:var(--hf-gap);padding-right:var(--hf-gap)}
+  body.hf-on .rm-card{width:min(860px, calc(100vw - 2 * var(--hf-gap)))}
 }

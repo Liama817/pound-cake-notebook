@@ -4931,7 +4931,7 @@ document.addEventListener('keydown', e=>{
 });
 
 function closeCard(){
-  document.getElementById('card-overlay').classList.remove('open');
+  document.getElementById('card-overlay')?.classList.remove('open');
   document.body.style.overflow='';
 }
 function closeCardOnBg(e){

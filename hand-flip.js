@@ -30,14 +30,15 @@ Object.assign(T.en, {
   'hand.camera': 'Allow camera access to begin.',
   'hand.ready': "👋 Sweep left — next page\n👋 Lower your hand, then sweep right — back",
   'hand.noHand': "✋ Show your hand to the camera",
+  'hand.cover': "👋 Sweep left to open the notebook",
   'hand.grab': 'Turning the page…',
   'hand.end': 'No more pages this way.',
   'hand.denied': 'Camera access was blocked. Allow it in your browser to use hand mode.',
   'hand.error': 'Hand tracking could not start on this device.',
   'hand.privacy': 'Video stays on your device.',
   'hand.sayHi': '👋 Say hi to open',
-  'hand.wave': "👋 Wave hello to open the notebook",
-  'hand.hello': "👋 Hello! Opening your notebook…",
+  'hand.wave': "👋👋 Raise both hands and wave hello",
+  'hand.hello': "👋 Hello! Here's your notebook",
   'hand.skip': 'Skip',
   'hand.openInstead': 'Open the notebook instead',
   'hand.shelf': "☝️ Point at a cake\n🤏 Pinch to take it out\n✋ Sweep a flat palm — next chapter",
@@ -59,14 +60,15 @@ Object.assign(T.zh, {
   'hand.camera': '请允许使用摄像头。',
   'hand.ready': "👋 向左划 — 下一页\n👋 先放下手，再向右划 — 上一页",
   'hand.noHand': "✋ 请把手放到摄像头前",
+  'hand.cover': "👋 向左划，打开笔记本",
   'hand.grab': '正在翻页…',
   'hand.end': '这个方向没有更多页面了。',
   'hand.denied': '摄像头被拒绝，请在浏览器中允许后再试。',
   'hand.error': '此设备无法启动手势识别。',
   'hand.privacy': '视频只在你的设备上处理。',
   'hand.sayHi': '👋 挥手打开',
-  'hand.wave': "👋 挥挥手，打开笔记本",
-  'hand.hello': "👋 你好！正在打开笔记本…",
+  'hand.wave': "👋👋 举起双手，挥手打个招呼",
+  'hand.hello': "👋 你好！这是你的笔记本",
   'hand.skip': '跳过',
   'hand.openInstead': '直接打开笔记本',
   'hand.shelf': "☝️ 用食指指向一块蛋糕\n🤏 捏一下，把它取出来\n✋ 张开手掌划动 — 换章节",
@@ -347,11 +349,6 @@ const Surface = (() => {
   return { begin, move, end, busy };
 })();
 
-// The notebook's way in: turn the book's cover, or the flat cover without it.
-function openNotebook(){
-  if(window.historyBook) window.historyBook.open();
-  else Flip.turn(1);
-}
 
 // ── 4. GESTURE ──────────────────────────────────────────────
 // Feed it one hand's 21 landmarks per video frame (or null for no hand).
@@ -391,7 +388,8 @@ function createGesture({ surface, onState, onWave = () => {} }){
   let blockedUntil = -Infinity;
   let lastSeen = -Infinity;
   let appearedAt = -Infinity;
-  let waveDir = 0, waveEdge = null, reversals = [];   // wave: current heading, furthest point, turn times
+  let waves = [];                // wave: one swing tracker per hand, left to right
+  let twoSeenAt = -Infinity;     // when two hands were last in view
   let debug = { hand:false, state:'' };
 
   const pageY = y => Math.min(0.95, Math.max(0.05, (y - 0.15) / 0.7));
@@ -403,30 +401,47 @@ function createGesture({ surface, onState, onWave = () => {} }){
     dir = 0; trail = [];
   }
 
-  function resetWave(){ waveDir = 0; waveEdge = null; reversals = []; }
+  const newWave = () => ({ dir:0, edge:null, turns:[] });
+  function resetWave(){ waves = [newWave(), newWave()]; }
+  resetWave();
 
   // A wave is an open palm swinging side to side: count the moments it
-  // changes direction after travelling at least WAVE_SWING.
-  function trackWave(palmX, now){
-    if(waveEdge === null){ waveEdge = palmX; return false; }
-    const moved = palmX - waveEdge;
-    if(waveDir === 0){
-      if(Math.abs(moved) > WAVE_SWING){ waveDir = Math.sign(moved); waveEdge = palmX; }
-    } else if(Math.sign(moved) === waveDir){
-      waveEdge = palmX;                                   // still heading the same way
+  // changes direction after travelling at least WAVE_SWING. Returns how
+  // many turns this hand made within WAVE_MS.
+  function trackWave(w, palmX, now){
+    w.turns = w.turns.filter(t => now - t <= WAVE_MS);
+    if(w.edge === null){ w.edge = palmX; return w.turns.length; }
+    const moved = palmX - w.edge;
+    if(w.dir === 0){
+      if(Math.abs(moved) > WAVE_SWING){ w.dir = Math.sign(moved); w.edge = palmX; }
+    } else if(Math.sign(moved) === w.dir){
+      w.edge = palmX;                                     // still heading the same way
     } else if(Math.abs(moved) > WAVE_SWING){
-      waveDir = -waveDir; waveEdge = palmX;               // turned around
-      reversals = reversals.filter(t => now - t <= WAVE_MS).concat(now);
-      if(reversals.length >= 2){ resetWave(); return true; }
+      w.dir = -w.dir; w.edge = palmX;                     // turned around
+      w.turns.push(now);
     }
-    return false;
+    return w.turns.length;
+  }
+
+  // The hello is both hands waving: each turns at least once, three turns
+  // between them. Someone showing only one hand can still wave it (two turns).
+  function trackWaves(hands, now){
+    const palms = hands.map(h => 1 - h[9].x).sort((a, b) => a - b).slice(0, 2);
+    if(palms.length === 2) twoSeenAt = now;
+    // each hand keeps its own tracker: by order when both are seen, by side of the picture when one is
+    const slots = palms.length === 2 ? [0, 1] : [palms[0] < 0.5 ? 0 : 1];
+    const turns = [0, 0];
+    slots.forEach((slot, i) => { turns[slot] = trackWave(waves[slot], palms[i], now); });
+    const both = now - twoSeenAt < 1000;
+    if(both) return turns[0] >= 1 && turns[1] >= 1 && turns[0] + turns[1] >= 3;
+    return turns[slots[0]] >= 2;
   }
 
   // canStart false: keep watching the hand, but don't start a new turn
   // (the Pointer layer is using the hand to point or pinch).
   // strict: the sweep would leave the section at once, with no page to hold
   // and let fall back, so it has to travel twice as far.
-  function feed(landmarks, now = performance.now(), canStart = true, strict = false){
+  function feed(landmarks, now = performance.now(), canStart = true, strict = false, hands = landmarks ? [landmarks] : []){
     if(!landmarks){
       // A fast-moving hand often drops out for a frame or two: until it has
       // been gone a moment, change nothing (keep the page, keep the lock).
@@ -441,8 +456,9 @@ function createGesture({ surface, onState, onWave = () => {} }){
     lastSeen = now;
     if(mode === 'idle'){ debug = { hand:true, state:'waiting' }; return; }
     if(mode === 'wave'){
-      debug = { hand:true, state:`wave ${reversals.length}/2` };
-      if(trackWave(1 - landmarks[9].x, now)){ mode = 'idle'; onWave(); }
+      const done = trackWaves(hands.length ? hands : [landmarks], now);
+      debug = { hand:true, state:`wave ${waves[0].turns.length}+${waves[1].turns.length} (${hands.length} hand${hands.length === 1 ? '' : 's'})` };
+      if(done){ resetWave(); mode = 'idle'; onWave(); }
       else onState('wave');
       return { active:false };
     }
@@ -783,19 +799,32 @@ function setI18n(el, key){
   el.textContent = t(key);
 }
 
-function drawHand(canvas, landmarks, active, progress = 0){
+// The hand's bones, as pairs of landmark numbers (MediaPipe's numbering)
+const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+
+// hands: a list of hands (or null). The first is the one that points and turns.
+function drawHand(canvas, hands, active, progress = 0){
   const ctx = canvas.getContext('2d');
   const w = canvas.width = canvas.clientWidth * devicePixelRatio;
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
   ctx.clearRect(0, 0, w, h);
-  if(!landmarks) return;
-  ctx.fillStyle = 'rgba(240,225,195,.7)';
-  for(const p of landmarks){
-    ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+  if(!hands || !hands.length) return;
+  // white dots joined by thin white lines, on every hand in view
+  const d = devicePixelRatio;
+  ctx.strokeStyle = 'rgba(255,255,255,.55)';
+  ctx.lineWidth = 1.25 * d;
+  ctx.fillStyle = '#fff';
+  for(const hand of hands){
+    ctx.beginPath();
+    for(const [a, b] of BONES){ ctx.moveTo(hand[a].x * w, hand[a].y * h); ctx.lineTo(hand[b].x * w, hand[b].y * h); }
+    ctx.stroke();
+    for(const p of hand){ ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2.4 * d, 0, Math.PI * 2); ctx.fill(); }
   }
+  const landmarks = hands[0];
   // The index fingertip is the "finger" that drags the page; it glows while turning.
   const tip = landmarks[8];
-  ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
+  ctx.fillStyle = active ? '#E2B84A' : '#fff';
   ctx.beginPath(); ctx.arc(tip.x * w, tip.y * h, (active ? 7 : 4.5) * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
   // A held pose (close, baked, want to bake) fills a ring around the palm.
   if(progress > 0){
@@ -967,7 +996,7 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
   // takes a deliberate one: an open palm, travelling twice as far.
   const strict = !window.historyBook?.visible;
   const openPalm = !!hand && (pose === 'Open_Palm' || (!pose && handShape(hand).open));
-  const info = gesture.feed(hand, now, !p.claimed && (!strict || openPalm), strict);
+  const info = gesture.feed(hand, now, !p.claimed && (!strict || openPalm), strict, hands);
   if(p.flash) flashUntil = now + 1600;
   if(pointerStatus && !holdStatus && !(info && info.active) && (p.flash || now >= flashUntil)) say(pointerStatus);
   // a held gesture also shows big on the card itself (cake-card.js)
@@ -985,11 +1014,11 @@ function loop(){
   if(v.readyState >= 2 && v.currentTime !== lastVideoTime){
     lastVideoTime = v.currentTime;
     const now = performance.now();
-    // follow a second hand only while a card is open, for the 🫶 heart
-    tracker.setHands?.(pointerEnv.cardOpen() ? 2 : 1);
+    // follow a second hand for the two-handed hello, and while a card is open, for the 🫶 heart
+    tracker.setHands?.(gesture.mode === 'wave' || pointerEnv.cardOpen() ? 2 : 1);
     const { hand, pose, hands } = tracker.run(v, now);
     const frame = handleFrame(hand, pose, now, hands);
-    drawHand(ui.canvas, hand, frame.active, frame.progress);
+    drawHand(ui.canvas, hands && hands.length ? hands : hand && [hand], frame.active, frame.progress);
     if(DEBUG){
       const d = gesture.debug;
       ui.debug.textContent = `hand ${d.hand ? '✓' : '✗'} · ${pose || '–'} · ${d.state}`;
@@ -1067,10 +1096,9 @@ function stop(){
 
 // ── WELCOME INTRO ───────────────────────────────────────────
 // "Say hi" on the cover → big mirror → wave → the mirror shrinks into the
-// corner → the cover rests for 1 s → it opens onto the first history page.
+// camera print beside the cover → the cover waits: a sweep opens it.
 
 const COVER_PAUSE_MS = 1000;
-const OPENING_MS = 1300;     // the cover turning over and the spread settling
 let restUntil = 0;           // hand tracking rests until then (loop())
 
 function startIntro(){
@@ -1096,19 +1124,20 @@ function greeted(){
   setI18n(ui.status, 'hand.hello');
   holdStatus = true;
   ui.panel.classList.add('greeted');
-  // From the wave until the book is open, everything is animation: the
+  // While the mirror becomes the print, everything is animation: the
   // tracker rests, so it can't make the motion stutter.
-  restUntil = performance.now() + 700 + 900 + COVER_PAUSE_MS + OPENING_MS;
+  restUntil = performance.now() + 700 + 900 + COVER_PAUSE_MS;
   drawHand(ui.canvas, null);
   introTimer = setTimeout(() => {
     ui.panel.classList.add('leaving');   // the mirror's words fade first…
     introTimer = setTimeout(() => {
       shrinkToCorner();                  // …then it becomes the print
+      // The cover then waits for the person: a sweep turns it, like any page.
+      // Page-turning starts only after a pause, so the tail of the wave
+      // isn't read as a sweep.
       introTimer = setTimeout(() => {
         holdStatus = false;
-        if(isCoverOpen()) openNotebook();
-        // Page-turning starts once the book is open, so a lingering wave
-        // during the intro isn't read as a swipe.
+        setI18n(ui.status, 'hand.cover');
         gesture.setMode('turn');
       }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
     }, 230);
@@ -1134,7 +1163,7 @@ function shrinkToCorner(){
   panel.style.transform =
     `translate(${first.left - panel.offsetLeft - k * pic.offsetLeft}px, ${first.top - panel.offsetTop - k * pic.offsetTop}px) scale(${k})`;
   panel.getBoundingClientRect();   // commit the starting frame
-  panel.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1), background-color .7s ease';
+  panel.style.transition = 'transform .9s cubic-bezier(.45,0,.2,1), background-color .7s ease';   // the notebook's own glide (history-book.css)
   panel.style.transform = '';
   // (the colour finishes first: wait for the move itself)
   const done = e => {
