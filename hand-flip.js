@@ -50,6 +50,10 @@ Object.assign(T.en, {
   'hand.marked.made': "👍 Baked it!",
   'hand.unmarked.made': "Baked mark removed",
   'hand.marked.wish': "🫶 Want to bake!",
+  // Film mode's single line, where the usual one lists several gestures
+  'hand.film.card': "👍 Hold — baked it   🫶 want to bake   ✋ close",
+  'hand.film.found': 'hand found',
+  'hand.film.lost': 'show your hand',
   'hand.unmarked.wish': "Removed from want to bake",
 });
 Object.assign(T.zh, {
@@ -79,6 +83,9 @@ Object.assign(T.zh, {
   'hand.marked.made': "👍 做过了！",
   'hand.unmarked.made': "已取消“做过”",
   'hand.marked.wish': "🫶 想做！",
+  'hand.film.card': "👍 保持 — 做过了   🫶 想做   ✋ 关闭",
+  'hand.film.found': '找到手了',
+  'hand.film.lost': '请露出你的手',
   'hand.unmarked.wish': "已从想做中移除",
 });
 
@@ -669,7 +676,7 @@ function createPointer(env){
         env.pull(pulling.id, p);
         env.cursor(cursor, 'pinch');
         quietUntil = Math.max(quietUntil, now + AFTER_POINT_MS);
-        if(p < 1) return { claimed:true, status:'pulling' };
+        if(p < 1) return { claimed:true, status:'pulling', progress:p };
         const id = pulling.id;
         pulling = null;
         env.point(null); env.cursor(null, 'hide'); cursor = null;
@@ -697,7 +704,7 @@ function createPointer(env){
       pulling = { id:target, since:now, lostAt:null };
       env.point(target);
       env.pull(target, 0);
-      return { claimed:true, status:'pulling' };
+      return { claimed:true, status:'pulling', progress:0 };
     }
     return { claimed:true, status: id ? 'pointing' : 'shelf' };
   }
@@ -737,14 +744,20 @@ function buildUI(){
     <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
+  // Film mode's guidance: one big line under the page, with whether the hand is seen
+  const guide = document.createElement('div');
+  guide.className = 'hf-guide';
+  guide.setAttribute('aria-hidden', 'true');   // .hf-status is what screen readers hear
+  guide.innerHTML = '<span class="hf-guide-dot"></span><small></small><span class="hf-guide-text"></span>';
+
   // The fingertip on the page while pointing at the Recipes shelf
   const cursor = document.createElement('div');
   cursor.className = 'hf-cursor';
   cursor.hidden = true;
 
-  document.body.append(backdrop, panel, btn, cursor);
+  document.body.append(backdrop, panel, btn, guide, cursor);
   return {
-    btn, sayHi, backdrop, panel, cursor,
+    btn, sayHi, backdrop, panel, cursor, guide,
     video: panel.querySelector('video'),
     canvas: panel.querySelector('canvas'),
     status: panel.querySelector('.hf-status'),
@@ -764,21 +777,41 @@ function drawHand(canvas, landmarks, active, progress = 0){
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
   ctx.clearRect(0, 0, w, h);
   if(!landmarks) return;
-  ctx.fillStyle = 'rgba(240,225,195,.7)';
-  for(const p of landmarks){
-    ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+  const at = i => [landmarks[i].x * w, landmarks[i].y * h];
+  const dot = (i, r) => { ctx.beginPath(); ctx.arc(...at(i), r * devicePixelRatio, 0, Math.PI * 2); ctx.fill(); };
+  if(document.body.classList.contains('film')){
+    // Film mode: the thumb and index finger drawn in honey, big enough to see in a video
+    ctx.strokeStyle = 'rgba(226,184,74,.9)';
+    ctx.lineWidth = 2.5 * devicePixelRatio; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for(const chain of [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8]]){
+      ctx.beginPath(); chain.forEach((i, k) => ctx[k ? 'lineTo' : 'moveTo'](...at(i))); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(251,246,234,.55)';
+    [9, 13, 17].forEach(i => dot(i, 2.5));
+    ctx.fillStyle = '#E2B84A';
+    [0, 1, 2, 3, 5, 6, 7].forEach(i => dot(i, 3.5));
+    [4, 8].forEach(i => dot(i, 5.5));
+    // a ring where the thumb and finger meet, once they're close
+    if(handShape(landmarks).pinchGap < PINCH_OFF){
+      const [ax, ay] = at(4), [bx, by] = at(8);
+      ctx.lineWidth = 3 * devicePixelRatio;
+      ctx.beginPath(); ctx.arc((ax + bx) / 2, (ay + by) / 2, 14 * devicePixelRatio, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = 'rgba(240,225,195,.7)';
+    for(const p of landmarks){
+      ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+    }
+    // The index fingertip is the "finger" that drags the page; it glows while turning.
+    ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
+    dot(8, active ? 7 : 4.5);
   }
-  // The index fingertip is the "finger" that drags the page; it glows while turning.
-  const tip = landmarks[8];
-  ctx.fillStyle = active ? '#E2B84A' : 'rgba(240,225,195,.9)';
-  ctx.beginPath(); ctx.arc(tip.x * w, tip.y * h, (active ? 7 : 4.5) * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
   // A held pose (close, baked, want to bake) fills a ring around the palm.
   if(progress > 0){
-    const palm = landmarks[9];
     ctx.strokeStyle = '#E2B84A';
     ctx.lineWidth = 3 * devicePixelRatio;
     ctx.beginPath();
-    ctx.arc(palm.x * w, palm.y * h, 22 * devicePixelRatio, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.arc(...at(9), 22 * devicePixelRatio, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
     ctx.stroke();
   }
 }
@@ -801,6 +834,37 @@ function say(key){
   const k = 'hand.' + key;
   if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
 }
+
+// ── FILM MODE ───────────────────────────────────────────────
+// For filming the notebook (a screen recording, or a phone pointed at the
+// laptop): press F. The camera becomes a large photo-booth print beside the
+// page, the tracking is drawn on the fingers, and one big line under the page
+// says what to do, filling up while a gesture is held. The chapter tabs and
+// buttons are hidden (hand-flip.css). Press F again to leave it.
+let film = false;
+function setFilm(on){
+  film = on;
+  document.body.classList.toggle('film', on);
+  try { localStorage.setItem('pcn-film', on ? '1' : ''); } catch(e){}
+  showGuide();
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 650);   // the book measures itself again
+}
+// The guide shows the first line of the status (the one that matters now).
+function showGuide(seen = ui.guide.classList.contains('seen'), progress = 0){
+  const key = ui.status.dataset.i18n || '';
+  const text = key === 'hand.card' ? t('hand.film.card') : (ui.status.textContent || '').split('\n')[0];
+  const line = ui.guide.querySelector('.hf-guide-text');
+  if(line.textContent !== text) line.textContent = text;
+  ui.guide.classList.toggle('seen', seen);
+  ui.guide.querySelector('small').textContent = t(seen ? 'hand.film.found' : 'hand.film.lost');
+  ui.guide.style.setProperty('--p', Math.round(progress * 100) + '%');
+}
+document.addEventListener('keydown', e => {
+  if((e.key !== 'f' && e.key !== 'F') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+  setFilm(!film);
+});
+try { if(localStorage.getItem('pcn-film')) setFilm(true); } catch(e){}
 
 const gesture = createGesture({
   surface: Surface,
@@ -846,20 +910,28 @@ const pointerEnv = {
     const el = ui.cursor;
     // hidden off the shelf, and while a card is open or a cake is in the air
     if(state === 'hide' || !this.shelfActive() || this.cardOpen() || !document.body.classList.contains('hf-on')){ el.hidden = true; return; }
+    const appearing = el.hidden;
     el.hidden = false;
     if(!c){
       if(!el.dataset.placed){
-        const r = document.querySelector('#recipes-panel .cabinet, #recipes-panel .shelf')?.getBoundingClientRect();
+        // the cabinet on wide screens, the shelf on phones: whichever is showing
+        const r = [...document.querySelectorAll('#recipes-panel .cabinet, #recipes-panel .shelf')].find(e => e.offsetWidth)?.getBoundingClientRect();
+        el.style.transition = 'none';   // appears there, rather than gliding in from the corner
         el.style.translate = r ? `${r.left + r.width / 2}px ${r.top + r.height * .45}px` : `${innerWidth / 2}px ${innerHeight / 2}px`;
+        el.offsetWidth; el.style.transition = '';
       }
       el.className = 'hf-cursor parked';
       return;
     }
+    // it glides between camera frames, but appears right where the hand is
+    const jump = appearing || !el.dataset.placed;
     el.dataset.placed = '1';
+    if(jump) el.style.transition = 'none';
     // `translate`, not `transform`: the mitt's scale and tilt (cake-card.css)
     // are applied after a transform and would scale the position with it,
     // drawing the mitt away from where the hand points.
     el.style.translate = `${c.u * innerWidth}px ${c.v * innerHeight}px`;
+    if(jump){ el.offsetWidth; el.style.transition = ''; }
     el.className = 'hf-cursor ' + state;
   },
   scrollCard(amount){
@@ -937,6 +1009,7 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
   // a held gesture also shows big on the card itself (cake-card.js)
   const holding = pointerStatus && pointerStatus.startsWith('hold.') ? pointerStatus.slice(5) : null;
   window.cakeCard?.hold(holding, p.progress || 0);
+  if(film) showGuide(!!hand, p.progress || 0);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
 

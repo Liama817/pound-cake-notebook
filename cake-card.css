@@ -143,6 +143,11 @@ body.hf-on #rm-card .rm-body-scroll{padding-bottom:58px}
 }
 .hf-cursor.point{scale:1.06}
 @media (min-width:1200px){ .hf-cursor:not(.pinch){scale:1.18} .hf-cursor.point{scale:1.26} }
+/* Film mode (hand-flip.css): the mitt 1.3× bigger, its fingertip still the point */
+@media (min-width:701px){
+  body.film .hf-cursor{width:124px !important;height:124px !important;margin:-18px 0 0 -49px !important;transform-origin:49px 18px}
+  body.film .cc-nametag{font-size:20px;padding:8px 16px 9px 28px}
+}
 /* a pinch: the mitt squeezes */
 .hf-cursor.pinch{scale:.86;rotate:6deg}
 /* no hand in view: the mitt waits where it was, faded, breathing */

@@ -144,3 +144,53 @@ body.hf-intro .hf-toggle{visibility:hidden}
   .hf-panel{right:1rem;bottom:3.8rem;width:160px}
   .hf-status{font-size:13px}
 }
+
+/* ── Film mode (F) ──
+   For filming the notebook: the camera becomes a large photo-booth print
+   taped beside the page, and one big line under the page says what to do.
+   The chapter tabs and buttons step aside. Wide screens only. */
+.hf-guide{display:none}
+@media (min-width:701px){
+  body.film.hf-on{--hf-w:36vw}
+  /* the page keeps a margin on its left too, takes the header's place, and leaves room for the guide */
+  body.film.hf-on #recipes-panel.active,
+  body.film.hf-on #tips-panel.active{padding-left:2.4rem;top:12px;bottom:84px}
+  body.film.hf-on .hb-stage:not(.closed){padding-left:2.4rem}
+  body.film.hf-on .book-header,
+  body.film.hf-on .hf-toggle{display:none}
+  /* the print: a warm, bright picture of you, with your hand drawn on */
+  body.film .hf-panel.open:not(.hero){
+    top:50%;bottom:auto;right:2.2rem;width:var(--hf-w);
+    transform:translateY(-50%) rotate(1.2deg);
+    background:#FBF6EA;border:0;padding:12px 12px 14px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);
+  }
+  body.film .hf-panel.open:not(.hero)::before{
+    content:'';position:absolute;left:50%;top:-12px;width:110px;height:26px;margin-left:-55px;
+    background:rgba(226,184,74,.6);transform:rotate(-3deg);
+  }
+  body.film .hf-panel:not(.hero) .hf-stage video{filter:sepia(.1) saturate(1.05) brightness(1.06)}
+  /* its words move to the guide; still read out to screen readers */
+  body.film .hf-panel:not(.hero) .hf-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;min-height:0}
+  /* an open recipe card sits beside the print, not under it */
+  body.film.hf-on #recipe-modal{padding-right:calc(var(--hf-w) + 4.4rem)}
+  body.film.hf-on .rm-card{width:min(860px, calc(100vw - var(--hf-w) - 7rem))}
+
+  /* the guide: one line under the page, centred on it */
+  body.film.hf-on .hf-guide{
+    position:fixed;z-index:740;bottom:28px;left:calc((100vw - var(--hf-w) - 2.2rem) / 2);transform:translateX(-50%);
+    display:flex;align-items:center;gap:14px;max-width:calc(100vw - var(--hf-w) - 5rem);
+    padding:12px 22px 13px;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+    background:linear-gradient(90deg, rgba(226,184,74,.45) var(--p, 0%), transparent var(--p, 0%)) #FBF6EA;
+    transition:--p .15s linear;   /* --p is registered in cake-card.css */
+    font-family:var(--font-lora),'Noto Serif SC',Georgia,serif;font-style:italic;font-size:24px;line-height:1.2;color:#3E3326;white-space:nowrap;
+  }
+  body.film.hf-on.hf-intro .hf-guide{display:none}
+  .hf-guide small{font-style:normal;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#8A7A66;
+    padding-right:14px;border-right:1px solid rgba(94,78,59,.25)}
+  .hf-guide-dot{width:11px;height:11px;border-radius:50%;background:#B9AC98;flex:none;transition:background .2s ease, box-shadow .2s ease}
+  .hf-guide.seen .hf-guide-dot{background:#6E9A4E;box-shadow:0 0 0 4px rgba(110,154,78,.22)}
+  .hf-guide.seen small{color:#5E7F44}
+  .hf-guide:not(.seen) small{display:none}   /* the line itself says to show your hand */
+  .hf-guide-text{overflow:hidden;text-overflow:ellipsis}
+}
