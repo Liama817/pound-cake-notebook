@@ -50,10 +50,10 @@ Object.assign(T.en, {
   'hand.marked.made': "👍 Baked it!",
   'hand.unmarked.made': "Baked mark removed",
   'hand.marked.wish': "🫶 Want to bake!",
-  // Film mode's single line, where the usual one lists several gestures
-  'hand.film.card': "👍 Hold — baked it   🫶 want to bake   ✋ close",
-  'hand.film.found': 'hand found',
-  'hand.film.lost': 'show your hand',
+  // The guide's single line, where the usual message lists several gestures
+  'hand.guide.card': "👍 Hold — baked it   🫶 want to bake   ✋ close",
+  'hand.guide.found': 'hand found',
+  'hand.guide.lost': 'show your hand',
   'hand.unmarked.wish': "Removed from want to bake",
 });
 Object.assign(T.zh, {
@@ -83,9 +83,9 @@ Object.assign(T.zh, {
   'hand.marked.made': "👍 做过了！",
   'hand.unmarked.made': "已取消“做过”",
   'hand.marked.wish': "🫶 想做！",
-  'hand.film.card': "👍 保持 — 做过了   🫶 想做   ✋ 关闭",
-  'hand.film.found': '找到手了',
-  'hand.film.lost': '请露出你的手',
+  'hand.guide.card': "👍 保持 — 做过了   🫶 想做   ✋ 关闭",
+  'hand.guide.found': '找到手了',
+  'hand.guide.lost': '请露出你的手',
   'hand.unmarked.wish': "已从想做中移除",
 });
 
@@ -744,7 +744,7 @@ function buildUI(){
     <p class="hf-debug" hidden></p>
     <button class="hf-skip" type="button" data-i18n="hand.skip">${t('hand.skip')}</button>`;
 
-  // Film mode's guidance: one big line under the page, with whether the hand is seen
+  // The guidance on a wide screen: one big line under the page, with whether the hand is seen
   const guide = document.createElement('div');
   guide.className = 'hf-guide';
   guide.setAttribute('aria-hidden', 'true');   // .hf-status is what screen readers hear
@@ -779,8 +779,8 @@ function drawHand(canvas, landmarks, active, progress = 0){
   if(!landmarks) return;
   const at = i => [landmarks[i].x * w, landmarks[i].y * h];
   const dot = (i, r) => { ctx.beginPath(); ctx.arc(...at(i), r * devicePixelRatio, 0, Math.PI * 2); ctx.fill(); };
-  if(document.body.classList.contains('film')){
-    // Film mode: the thumb and index finger drawn in honey, big enough to see in a video
+  if(bigPicture()){
+    // the big picture beside the page: thumb and index finger drawn in honey, big enough to see in a video
     ctx.strokeStyle = 'rgba(226,184,74,.9)';
     ctx.lineWidth = 2.5 * devicePixelRatio; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for(const chain of [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8]]){
@@ -835,36 +835,22 @@ function say(key){
   if(ui.status.dataset.i18n !== k) setI18n(ui.status, k);
 }
 
-// ── FILM MODE ───────────────────────────────────────────────
-// For filming the notebook (a screen recording, or a phone pointed at the
-// laptop): press F. The camera becomes a large photo-booth print beside the
-// page, the tracking is drawn on the fingers, and one big line under the page
-// says what to do, filling up while a gesture is held. The chapter tabs and
-// buttons are hidden (hand-flip.css). Press F again to leave it.
-let film = false;
-function setFilm(on){
-  film = on;
-  document.body.classList.toggle('film', on);
-  try { localStorage.setItem('pcn-film', on ? '1' : ''); } catch(e){}
-  showGuide();
-  setTimeout(() => window.dispatchEvent(new Event('resize')), 650);   // the book measures itself again
-}
-// The guide shows the first line of the status (the one that matters now).
-function showGuide(seen = ui.guide.classList.contains('seen'), progress = 0){
+// ── THE GUIDE ───────────────────────────────────────────────
+// With hand mode on a wide screen the camera is a big print beside the page
+// (hand-flip.css), made to be filmed, and one big line under the page says
+// what to do now: the first line of the status, filling up while a gesture
+// is held, with a dot showing whether the hand is seen.
+const wide = window.matchMedia('(min-width:701px)');
+const bigPicture = () => wide.matches && document.body.classList.contains('hf-on');
+function showGuide(seen, progress = 0){
   const key = ui.status.dataset.i18n || '';
-  const text = key === 'hand.card' ? t('hand.film.card') : (ui.status.textContent || '').split('\n')[0];
+  const text = key === 'hand.card' ? t('hand.guide.card') : (ui.status.textContent || '').split('\n')[0];
   const line = ui.guide.querySelector('.hf-guide-text');
   if(line.textContent !== text) line.textContent = text;
   ui.guide.classList.toggle('seen', seen);
-  ui.guide.querySelector('small').textContent = t(seen ? 'hand.film.found' : 'hand.film.lost');
+  ui.guide.querySelector('small').textContent = t(seen ? 'hand.guide.found' : 'hand.guide.lost');
   ui.guide.style.setProperty('--p', Math.round(progress * 100) + '%');
 }
-document.addEventListener('keydown', e => {
-  if((e.key !== 'f' && e.key !== 'F') || e.metaKey || e.ctrlKey || e.altKey) return;
-  if(e.target.closest?.('input, textarea, select, [contenteditable]')) return;
-  setFilm(!film);
-});
-try { if(localStorage.getItem('pcn-film')) setFilm(true); } catch(e){}
 
 const gesture = createGesture({
   surface: Surface,
@@ -1009,7 +995,7 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
   // a held gesture also shows big on the card itself (cake-card.js)
   const holding = pointerStatus && pointerStatus.startsWith('hold.') ? pointerStatus.slice(5) : null;
   window.cakeCard?.hold(holding, p.progress || 0);
-  if(film) showGuide(!!hand, p.progress || 0);
+  if(bigPicture()) showGuide(!!hand, p.progress || 0);
   return { active: !!(info && info.active), progress: p.progress || 0 };
 }
 
@@ -1071,6 +1057,7 @@ async function start(){
 function setHandOn(on){
   if(document.body.classList.contains('hf-on') === on) return;
   document.body.classList.toggle('hf-on', on);
+  if(on) showGuide(false);
   if(!on){ ui.cursor.hidden = true; delete ui.cursor.dataset.placed; }
   setTimeout(() => window.dispatchEvent(new Event('resize')), 650);
 }
