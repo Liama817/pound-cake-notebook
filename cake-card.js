@@ -9,8 +9,7 @@
 //             corner, where the ink always has clean paper under it. Held by
 //             hand, the stamp's shadow comes down onto the tag as the gesture
 //             is held, and the ink lands when it touches; by the buttons, it
-//             comes down at once. Then a sticker (👍 or ♥) is pressed onto
-//             the tag's corner. Stamp and sticker stay on the card.
+//             comes down at once. The stamp stays on the card.
 //   Closing   holding an open palm lets the card sink a little, as if being
 //             put away, before it turns back into the cake.
 //   Key       in hand mode, the card's foot says which gesture does what.
@@ -227,12 +226,10 @@ async function close(btn, id, hide){
 const tag = document.createElement('div');
 tag.className = 'cc-tag';
 tag.hidden = true;
-tag.innerHTML = '<span class="cc-tape" aria-hidden="true"></span><span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>'
-  + '<span class="cc-sticker" aria-hidden="true"><i class="cc-shine"></i></span>';   // its picture follows the ink (cake-card.css)
+tag.innerHTML = '<span class="cc-tape" aria-hidden="true"></span><span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>';
 card.appendChild(tag);
 const shadow = tag.querySelector('.cc-shadow');
 const ink = tag.querySelector('.cc-ink');
-const sticker = tag.querySelector('.cc-sticker');
 
 // "Baked it" carries the day it was marked.
 const madeKey = id => 'rj-made-' + id;
@@ -302,30 +299,31 @@ function stamp(kind){
   card.animate([
     { transform:'none' }, { transform:'translateY(2px)', offset:.3 }, { transform:'none' },
   ], { duration:220, delay:lead, easing:'ease-out' });
-  glue(lead + 260);
+  setTimeout(() => burst(kind), lead + 120);
   pressed = 0;
 }
 
-// Once the ink is down, a sticker is pressed onto the tag's corner (a
-// thumbs-up for baked, a heart for want to bake): it comes down from above,
-// lifted and tilted, is pressed flat with a little squash, and its gloss is
-// smoothed down. It stays on, like the ink.
-['thumb', 'heart'].forEach(n => { new Image().src = `images/stamp/sticker-${n}@2x.png`; });   // ready before the first stamp
-function glue(delay){
-  if(reducedMotion()) return;
-  // fill: backwards only: hidden until its turn, then nothing left pinning it
-  sticker.animate([
-    { opacity:0, transform:'translate(26px,-70px) rotate(-34deg) scale(1.55)', filter:'drop-shadow(10px 26px 14px rgba(60,35,10,.22))' },
-    { opacity:1, transform:'translate(16px,-44px) rotate(-26deg) scale(1.45)', filter:'drop-shadow(9px 22px 12px rgba(60,35,10,.24))', offset:.18 },
-    { transform:'translate(0,0) rotate(-14deg) scale(1.06)', filter:'drop-shadow(2px 5px 4px rgba(60,35,10,.3))', offset:.5, easing:'ease-out' },
-    { transform:'translate(0,1px) rotate(-11deg) scale(.93,.9)', filter:'drop-shadow(1px 2px 1.5px rgba(60,35,10,.32))', offset:.62, easing:'ease-out' },
-    { transform:'rotate(-12deg) scale(1.03)', offset:.78 },
-    { opacity:1, transform:'rotate(-12deg) scale(1)', filter:'drop-shadow(1px 2px 2px rgba(60,35,10,.28))' },
-  ], { duration:900, delay, easing:'cubic-bezier(.3,.6,.4,1)', fill:'backwards' });
-  // smoothing it down: a gleam passes over it once it's flat
-  sticker.firstElementChild.animate([
-    { backgroundPosition:'160% 0' }, { backgroundPosition:'-60% 0' },
-  ], { duration:620, delay:delay + 640, easing:'ease-in-out' });
+// As the ink lands, a little burst of painted stickers rises from the tag:
+// the oven mitt's thumbs-up for baked, a heart for want to bake.
+const BURST = { made:'thumbs', wish:'heart' };
+Object.values(BURST).forEach(n => { new Image().src = `images/stamp/${n}@2x.png`; });   // ready before the first stamp
+function burst(kind){
+  if(reducedMotion() || tag.hidden) return;
+  const r = tag.getBoundingClientRect();
+  // [across the tag, tilt, delay, size, drift]: a little fountain, spreading outwards
+  [[-.3, -16, 0, 1, -1.6], [-.1, 10, 140, .78, -.5], [.08, -6, 60, 1.12, .3], [.3, 14, 200, .86, 1.5]].forEach(([dx, rot, delay, size, drift]) => {
+    const e = document.createElement('span');
+    e.className = 'cc-burst ' + BURST[kind];
+    e.setAttribute('aria-hidden', 'true');
+    e.style.left = (r.left + r.width * (.5 + dx)) + 'px';
+    e.style.top = (r.top + r.height * .6) + 'px';
+    e.style.setProperty('--r', rot + 'deg');
+    e.style.setProperty('--s', size);
+    e.style.setProperty('--dx', (drift * 70) + 'px');
+    e.style.animationDelay = delay + 'ms';
+    document.body.appendChild(e);
+    setTimeout(() => e.remove(), 2000 + delay);
+  });
 }
 
 // Marking by hand or by the buttons both go through toggleMade / toggleWish.
