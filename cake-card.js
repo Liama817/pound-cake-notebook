@@ -9,7 +9,9 @@
 //             corner, where the ink always has clean paper under it. Held by
 //             hand, the stamp's shadow comes down onto the tag as the gesture
 //             is held, and the ink lands when it touches; by the buttons, it
-//             comes down at once. The stamp stays on the card.
+//             comes down at once. With it, a sticker (👍 or ♥), made in the
+//             middle of the screen while the gesture is held, flies onto the
+//             tag's corner and is pressed on. Stamp and sticker stay.
 //   Closing   holding an open palm lets the card sink a little, as if being
 //             put away, before it turns back into the cake.
 //   Key       in hand mode, the card's foot says which gesture does what.
@@ -226,10 +228,12 @@ async function close(btn, id, hide){
 const tag = document.createElement('div');
 tag.className = 'cc-tag';
 tag.hidden = true;
-tag.innerHTML = '<span class="cc-tape" aria-hidden="true"></span><span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>';
+tag.innerHTML = '<span class="cc-tape" aria-hidden="true"></span><span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>'
+  + '<span class="cc-sticker" aria-hidden="true"></span>';   // its picture follows the ink (cake-card.css)
 card.appendChild(tag);
 const shadow = tag.querySelector('.cc-shadow');
 const ink = tag.querySelector('.cc-ink');
+const sticker = tag.querySelector('.cc-sticker');
 
 // "Baked it" carries the day it was marked.
 const madeKey = id => 'rj-made-' + id;
@@ -286,16 +290,32 @@ function stamp(kind){
   inkFor(kind);
   const fresh = tag.hidden;
   tag.hidden = false;
-  if(reducedMotion()){ shadowTo(0, 1.35); return; }
+  if(reducedMotion()){ shadowTo(0, 1.35); forming(null); return; }
   if(fresh){ tag.classList.remove('arriving'); reflow(tag); tag.classList.add('arriving'); }
-  const lead = pressed > .9 ? 0 : (fresh ? 380 : 160);
-  if(lead){ shadowTo(0, 1.35); reflow(shadow); shadowTo(1, 1, lead); }
+  // The sticker: already made in the middle by a held gesture, or made now
+  // (by the buttons); it flies to the tag's corner and is pressed on, and
+  // the ink lands with it.
+  const made = !maker.hidden && pressed > .9;
+  const pop = made ? 0 : 440;
+  if(!made) popIn(kind);
+  const lead = pop + FLY_MS;
+  landingUntil = performance.now() + lead;
+  setTimeout(() => flyToTag(), pop);
+  if(!made){ shadowTo(0, 1.35); reflow(shadow); shadowTo(1, 1, lead); }
   setTimeout(() => shadowTo(0, 1, 220, 'ease-out'), lead);   // it lifts as the ink lands
   ink.animate([
     { opacity:0, transform:'scale(1.04)', filter:'blur(1.2px)' },
     { opacity:.55, transform:'scale(1.04)', filter:'blur(.8px)', offset:.12 },
     { opacity:.95, transform:'scale(1)', filter:'blur(0)' },
   ], { duration:480, delay:lead, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards' });
+  // on the tag, the sticker shows only once it arrives, pressed flat with a squash
+  sticker.animate([
+    { opacity:0, transform:'rotate(-12deg) scale(1.12)', offset:0 },
+    { opacity:1, transform:'rotate(-12deg) scale(1.12)', offset:.01 },
+    { transform:'rotate(-11deg) scale(.9, .86)', offset:.4 },
+    { transform:'rotate(-12deg) scale(1.04)', offset:.7 },
+    { opacity:1, transform:'rotate(-12deg) scale(1)' },
+  ], { duration:360, delay:lead, easing:'ease-out', fill:'backwards' });
   card.animate([
     { transform:'none' }, { transform:'translateY(2px)', offset:.3 }, { transform:'none' },
   ], { duration:220, delay:lead, easing:'ease-out' });
@@ -303,20 +323,87 @@ function stamp(kind){
   pressed = 0;
 }
 
-// As the ink lands, a little burst of painted stickers rises from the tag:
-// the oven mitt's thumbs-up for baked, a heart for want to bake.
-const BURST = { made:'thumbs', wish:'heart' };
-Object.values(BURST).forEach(n => { new Image().src = `images/stamp/${n}@2x.png`; });   // ready before the first stamp
+// ── The sticker, made in the middle ──
+// Held by hand (👍 or 🫶), a sticker forms in the middle of the screen as the
+// gesture is held: it grows, turning upright. Let go early and it shrinks
+// away; hold to the end and the stamp sends it flying onto the tag.
+const STICKER = { made:'thumb', wish:'heart' };
+['thumb', 'heart'].forEach(n => { new Image().src = `images/stamp/sticker-${n}@2x.png`; });   // ready before the first one
+const FLY_MS = 620;
+let landingUntil = 0;   // while the sticker is on its way, letting go of the gesture changes nothing
+const maker = document.createElement('div');
+maker.className = 'cc-maker';
+maker.hidden = true;
+maker.setAttribute('aria-hidden', 'true');
+document.body.appendChild(maker);
+let makerFlying = false, makerTimer = 0;
+const CENTRE = 'translate(-50%, -50%)';
+// kind null: let go
+function forming(kind, p){
+  if(makerFlying) return;
+  clearTimeout(makerTimer);
+  if(!kind){                                        // let go: it shrinks away
+    if(maker.hidden) return;
+    maker.style.transition = 'opacity .22s ease, transform .22s ease';
+    maker.style.opacity = '0';
+    maker.style.transform = `${CENTRE} rotate(-20deg) scale(.3)`;
+    makerTimer = setTimeout(() => { maker.hidden = true; }, 240);
+    return;
+  }
+  maker.hidden = false;
+  maker.className = 'cc-maker ' + STICKER[kind];
+  const e = 1 - Math.pow(1 - p, 3);
+  // the camera gives a new p only every frame or two: glide between them
+  maker.style.transition = 'opacity .14s linear, transform .14s linear';
+  maker.style.opacity = String(Math.min(1, p * 2.5));
+  maker.style.transform = `${CENTRE} rotate(${-24 * (1 - e) + Math.sin(p * 14) * 2.5 * (1 - p)}deg) scale(${.2 + .8 * e})`;
+}
+// by the buttons: the sticker pops up in the middle at once
+function popIn(kind){
+  clearTimeout(makerTimer);
+  maker.hidden = false;
+  maker.className = 'cc-maker ' + STICKER[kind];
+  maker.style.transition = 'none';
+  maker.style.opacity = '1';
+  maker.style.transform = `${CENTRE} rotate(0deg) scale(1)`;
+  maker.animate([
+    { opacity:0, transform:`${CENTRE} rotate(-24deg) scale(.2)` },
+    { opacity:1, transform:`${CENTRE} rotate(4deg) scale(1.08)`, offset:.6 },
+    { opacity:1, transform:`${CENTRE} rotate(0deg) scale(1)` },
+  ], { duration:360, easing:'cubic-bezier(.3,.8,.4,1)' });
+}
+// from the middle to the tag's corner, in a little arc, shrinking to its size there
+function flyToTag(){
+  if(maker.hidden) return;
+  makerFlying = true;
+  const m = maker.getBoundingClientRect(), t = sticker.getBoundingClientRect();
+  const dx = (t.left + t.width / 2) - (m.left + m.width / 2), dy = (t.top + t.height / 2) - (m.top + m.height / 2);
+  const k = sticker.offsetWidth / maker.offsetWidth;
+  maker.style.transition = 'none';
+  const at = (f, lift, rot, sc) => `translate(calc(-50% + ${dx * f}px), calc(-50% + ${dy * f - lift}px)) rotate(${rot}deg) scale(${sc})`;
+  const a = maker.animate([
+    { transform: getComputedStyle(maker).transform, opacity:1 },
+    { transform: at(.15, 30, 6, 1.06), offset:.22 },
+    { transform: at(.6, 40, -6, (1 + k) / 2), offset:.6 },
+    { transform: at(1, 0, -12, k * 1.12), opacity:1 },
+  ], { duration:FLY_MS, easing:'cubic-bezier(.45,0,.3,1)', fill:'forwards' });
+  a.finished.then(() => { a.cancel(); maker.hidden = true; makerFlying = false; });
+}
+
+// As the sticker is pressed on, a little burst of stickers rises from it.
+const BURST = { made:'thumb', wish:'heart' };
+new Image().src = 'images/stamp/heart@2x.png';   // ready before the first stamp (the thumb is the sticker's picture)
 function burst(kind){
   if(reducedMotion() || tag.hidden) return;
-  const r = tag.getBoundingClientRect();
-  // [across the tag, tilt, delay, size, drift]: a little fountain, spreading outwards
+  // from the sticker just pressed on, so the ink stays clear
+  const r = sticker.getBoundingClientRect();
+  // [across, tilt, delay, size, drift]: a little fountain, spreading outwards
   [[-.3, -16, 0, 1, -1.6], [-.1, 10, 140, .78, -.5], [.08, -6, 60, 1.12, .3], [.3, 14, 200, .86, 1.5]].forEach(([dx, rot, delay, size, drift]) => {
     const e = document.createElement('span');
     e.className = 'cc-burst ' + BURST[kind];
     e.setAttribute('aria-hidden', 'true');
-    e.style.left = (r.left + r.width * (.5 + dx)) + 'px';
-    e.style.top = (r.top + r.height * .6) + 'px';
+    e.style.left = (r.left + r.width * (.5 + dx * 1.4)) + 'px';
+    e.style.top = (r.top + r.height * .4) + 'px';
     e.style.setProperty('--r', rot + 'deg');
     e.style.setProperty('--s', size);
     e.style.setProperty('--dx', (drift * 70) + 'px');
@@ -348,10 +435,11 @@ function hold(kind, progress = 0){
   if(!modal.classList.contains('open')) kind = null;
   if(kind !== holding){
     // let go early: the stamp lifts away, the card comes back up
-    if(holding === 'made' || holding === 'wish'){
+    if((holding === 'made' || holding === 'wish') && performance.now() >= landingUntil){
       shadowTo(0, 1.35, 200, 'ease-out');
       if(!markOf(rmCurrentId)) tag.hidden = true;
       pressed = 0;
+      forming(null);
     }
     if(holding === 'close') card.style.scale = '';
     holding = kind;
@@ -365,6 +453,7 @@ function hold(kind, progress = 0){
     // the stamp comes down as the gesture is held
     pressed = progress;
     shadowTo(progress, 1.35 - .35 * progress);
+    forming(kind, progress);
   }
   if(kind === 'close') card.style.scale = String(1 - .035 * progress);
 }
