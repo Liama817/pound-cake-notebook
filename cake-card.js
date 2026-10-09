@@ -42,8 +42,46 @@ const GESTURE = { made:'👍', wish:'🫶', close:'✋' };
 
 // ── Cake ⇄ card ─────────────────────────────────────────────
 
-const OPEN_MS = 1050, CLOSE_MS = 900;
+const OPEN_MS = 1600, CLOSE_MS = 900;
 const EASE = 'cubic-bezier(.45,0,.2,1)';
+
+// ── Pulling the cake out (a held pinch) ─────────────────────
+// While the pinch is held, the cake rises off its plate and grows a little
+// and the room starts to dim, so it's clear something is happening. Let go
+// early and it settles back; hold to the end and it opens (open()).
+let pulled = null;   // { btn, img, fl, dim }
+// The cake is picked up as a copy floating above the dimming room (the shelf
+// itself sits under it); its spot on the shelf is left bare meanwhile.
+function pull(btn, p){
+  const img = btn?.querySelector('.slice-img');
+  if(!img) return;
+  if(p === null){                                  // let go: back onto the plate
+    if(!pulled) return;
+    const { fl, dim, btn:b } = pulled;
+    pulled = null;
+    fl.style.transition = 'transform .35s cubic-bezier(.3,1.3,.5,1)';
+    fl.style.transform = '';
+    dim.style.transition = 'opacity .3s ease'; dim.style.opacity = '0';
+    setTimeout(() => { fl.remove(); dim.remove(); b.classList.remove('cc-taken'); }, 360);
+    return;
+  }
+  if(!pulled){
+    const dim = document.createElement('div');
+    dim.className = 'cc-dim';
+    const fl = document.createElement('div');
+    fl.className = 'cc-flight cc-held';
+    fl.innerHTML = `<div class="cc-face cc-front"><img src="${img.currentSrc || img.src}" alt=""></div>`;
+    place(fl, rectOf(img));
+    document.body.append(dim, fl);
+    pulled = { btn, img, fl, dim };
+    btn.classList.add('cc-taken');
+  }
+  const e = 1 - Math.pow(1 - p, 2);               // eases out: quick to start, gentle to finish
+  pulled.fl.style.transition = 'none';
+  pulled.fl.style.transform = `translateY(${-26 * e}%) scale(${1 + .14 * e}) rotate(${-3 * e}deg)`;
+  pulled.dim.style.transition = 'none';
+  pulled.dim.style.opacity = String(.35 * e);
+}
 
 function flight(id, src, rect, flipped){
   const fl = document.createElement('div');
@@ -98,7 +136,9 @@ async function open(btn, id, reveal){
   const img = btn.querySelector('.slice-img');
   if(!img || reducedMotion()){ reveal(); return; }
   await Promise.race([Promise.all([preload(id), img.decode?.().catch(() => {})]), atMost(400)]);
-  const from = rectOf(img);
+  // pulled out by hand already: carry on from where the cake is held
+  const wasPulled = pulled && pulled.img === img ? pulled : null;
+  const from = rectOf(wasPulled ? wasPulled.fl : img);
   // open the card unseen to learn where it will be
   modal.classList.add('cc-hidden');
   reveal();
@@ -107,19 +147,21 @@ async function open(btn, id, reveal){
   const mid = middle(from, to);
   const { fl, flip, dim } = flight(id, img.currentSrc || img.src, from, false);
   btn.classList.add('cc-taken');   // the spot on the shelf is left bare
+  const dimFrom = wasPulled ? .35 : 0;
+  if(wasPulled){ pulled = null; wasPulled.dim.remove(); wasPulled.fl.remove(); }
+  // up and toward you, a moment held in front of you, then it turns over into the card
+  const path = wasPulled
+    ? [{ ...box(from), offset:0 }, { ...box(mid), offset:.4 }, { ...box(mid), offset:.52 }, { ...box(to), offset:1 }]
+    : [{ ...box(from), offset:0 }, { ...box(lifted), offset:.16 }, { ...box(mid), offset:.42 }, { ...box(mid), offset:.54 }, { ...box(to), offset:1 }];
+  const turn = wasPulled ? .52 : .54;
   const anims = [
-    fl.animate([
-      { ...box(from), offset:0 },
-      { ...box(lifted), offset:.18 },
-      { ...box(mid), offset:.5 },
-      { ...box(to), offset:1 },
-    ], { duration:OPEN_MS, easing:EASE, fill:'forwards' }),
+    fl.animate(path, { duration:OPEN_MS, easing:EASE, fill:'forwards' }),
     flip.animate([
       { transform:'rotateY(0deg)', offset:0 },
-      { transform:'rotateY(0deg)', offset:.5 },
+      { transform:'rotateY(0deg)', offset:turn },
       { transform:'rotateY(180deg)', offset:1 },
     ], { duration:OPEN_MS, easing:EASE, fill:'forwards' }),
-    dim.animate([{ opacity:0 }, { opacity:1, offset:.5 }, { opacity:1 }], { duration:OPEN_MS, fill:'forwards' }),
+    dim.animate([{ opacity:dimFrom }, { opacity:1, offset:.45 }, { opacity:1 }], { duration:OPEN_MS, fill:'forwards' }),
   ];
   await Promise.all(anims.map(a => a.finished));
   modal.classList.add('cc-arrived');      // the card is already in place: no entrance of its own
@@ -331,4 +373,4 @@ window.setLang = function(l){
   if(modal.classList.contains('open')) showMark();
 };
 
-window.cakeCard = { open, close, hold, stamp, preload };
+window.cakeCard = { open, close, hold, stamp, preload, pull };

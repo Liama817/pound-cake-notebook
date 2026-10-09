@@ -16,12 +16,14 @@ Object.assign(T.en, {
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
   'shelf.pinch': 'pinch to take it out',
+  'shelf.pulling': 'keep pinching…',
 });
 Object.assign(T.zh, {
   'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
   'shelf.pinch': '捏一下，把它取出来',
+  'shelf.pulling': '继续捏住…',
 });
 
 const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
@@ -236,9 +238,19 @@ function point(id){
   window.cakeCard?.preload(id);
 }
 
+// A held pinch pulls the cake out bit by bit (p 0–1, null to let go);
+// meanwhile its tag says to keep pinching.
+function pull(id, p){
+  const btn = document.querySelector(`.slice[data-recipe="${id}"]`);
+  if(!btn || !window.cakeCard) return;
+  window.cakeCard.pull(btn, p);
+  if(nametag && nametagFor === id) nametag.textContent = t(p === null ? 'shelf.pinch' : 'shelf.pulling');
+}
+
 // For the hand tracker (and tests): the cakes on the shelf, pointing at one, and picking it.
 window.recipeShelf = {
   pick,
+  pull,
   point,
   cakes: () => [...document.querySelectorAll('#recipes-panel .slice')],
   get open(){ return !!liftedId; },

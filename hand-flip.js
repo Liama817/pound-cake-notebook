@@ -42,6 +42,7 @@ Object.assign(T.en, {
   'hand.openInstead': 'Open the notebook instead',
   'hand.shelf': "☝️ Point at a cake\n🤏 Pinch to take it out\n✋ Sweep a flat palm — next chapter",
   'hand.pointing': "🤏 Pinch to take it out",
+  'hand.pulling': "🤏 Keep pinching — taking it out…",
   'hand.card': "🤏 Pinch and drag — scroll\n👍 Hold — baked it\n🫶 Hold — want to bake\n✋ Hold — close",
   'hand.hold.close': "✋ Keep holding to close…",
   'hand.hold.made': "👍 Keep holding…",
@@ -70,6 +71,7 @@ Object.assign(T.zh, {
   'hand.openInstead': '直接打开笔记本',
   'hand.shelf': "☝️ 用食指指向一块蛋糕\n🤏 捏一下，把它取出来\n✋ 张开手掌划动 — 换章节",
   'hand.pointing': "🤏 捏一下，把它取出来",
+  'hand.pulling': "🤏 继续捏住 — 正在取出…",
   'hand.card': "🤏 捏住拖动 — 滚动\n👍 保持 — 做过了\n🫶 保持 — 想做\n✋ 保持 — 关闭",
   'hand.hold.close': "✋ 保持住，即将关闭…",
   'hand.hold.made': "👍 保持住…",
@@ -517,6 +519,8 @@ const PINCH_OFF = 0.38;     // …and that lets it go (the gap between avoids fl
 const HOLD_MS = 700;        // how long a pose must be held to act
 const AFTER_CLOSE_MS = 900; // after closing a card, the open palm mustn't sweep the page
 const AFTER_POINT_MS = 1200;// after pointing at the shelf, no sweeps either
+const PULL_MS = 900;        // how long a pinch is held to pull a cake off the shelf
+const PULL_GRACE_MS = 180;  // a pinch lost for less than this (tracking flicker) isn't letting go
 const SCROLL_GAIN = 2.2;    // card scroll per unit of hand travel, in card heights
 
 const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -553,7 +557,14 @@ function createPointer(env){
   let hold = { kind:null, since:0, fired:false };
   let quietUntil = -Infinity; // no sweeps until then (just closed a card)
 
+  let pulling = null;         // { id, since, lostAt }: a cake being pulled off the shelf
+  let aimed = null;           // { id, at }: the cake last pointed at
+
+  function stopPulling(){ if(pulling){ env.pull(pulling.id, null); pulling = null; } }
+
   function release(){
+    stopPulling();
+    aimed = null;
     pinching = false; lastPinchY = null; cursor = null;
     hold = { kind:null, since:0, fired:false };
     env.point(null);
@@ -606,11 +617,38 @@ function createPointer(env){
     // ── Shelf showing ──
     hold = { kind:null, since:0, fired:false };
     lastPinchY = null;
-    if(!env.shelfActive()){ env.point(null); env.cursor(null, 'hide'); cursor = null; return { claimed: now < quietUntil, status:null }; }
+    if(!env.shelfActive()){ stopPulling(); env.point(null); env.cursor(null, 'hide'); cursor = null; return { claimed: now < quietUntil, status:null }; }
     // The middle of the camera frame covers the whole window, so the arm needn't stretch.
     const u = clamp01((1 - tip.x - 0.2) / 0.6);
     const v = clamp01((tip.y - 0.15) / 0.6);
-    cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
+    // Steady when the hand moves slowly (small shakes don't move the mitt),
+    // quick when it moves on purpose. While pinching the mitt stays where it
+    // was aimed: closing the fingers moves the hand, and the pinch point
+    // (between thumb and finger) isn't where the fingertip was pointing.
+    if(!cursor) cursor = { u, v };
+    else if(!pinching){
+      const d = Math.hypot(u - cursor.u, v - cursor.v);
+      const k = d > .04 ? .6 : d > .015 ? .4 : .2;
+      cursor = { u: cursor.u + (u - cursor.u) * k, v: cursor.v + (v - cursor.v) * k };
+    }
+    // A held pinch pulls the cake out bit by bit; letting go puts it back.
+    if(pulling){
+      if(pinching) pulling.lostAt = null;
+      else if(pulling.lostAt === null) pulling.lostAt = now;
+      if(pulling.lostAt !== null && now - pulling.lostAt > PULL_GRACE_MS) stopPulling();
+      else {
+        const p = Math.min(1, (now - pulling.since) / PULL_MS);
+        env.pull(pulling.id, p);
+        env.cursor(cursor, 'pinch');
+        quietUntil = Math.max(quietUntil, now + AFTER_POINT_MS);
+        if(p < 1) return { claimed:true, status:'pulling' };
+        const id = pulling.id;
+        pulling = null;
+        env.point(null); env.cursor(null, 'hide'); cursor = null;
+        env.pick(id);
+        return { claimed:true, status:'card' };
+      }
+    }
     // the mitt follows the hand whatever its shape, so it's always easy to find;
     // only a pointing finger picks out a cake
     if(!shape.pointing && !pinching){
@@ -619,15 +657,19 @@ function createPointer(env){
     }
     // lowering or relaxing the hand after pointing mustn't sweep the chapter away
     quietUntil = Math.max(quietUntil, now + AFTER_POINT_MS);
-    const id = env.cakeAt(cursor.u, cursor.v);
+    const id = env.cakeAt(cursor.u, cursor.v, aimed && aimed.id);
+    if(id) aimed = { id, at:now };
     env.point(id);
     env.cursor(cursor, pinching ? 'pinch' : 'point');
     if(cursor.v > 0.9) env.scrollPage((cursor.v - 0.9) * 120);   // near the edge: bring more shelf into view
     if(cursor.v < 0.1) env.scrollPage((cursor.v - 0.1) * 120);
-    if(pinchStarted && id){
-      env.point(null); env.cursor(null, 'hide'); cursor = null;
-      env.pick(id);
-      return { claimed:true, status:'card' };
+    // the pinch goes to the cake aimed at a moment ago, even if the hand slid off it while pinching
+    const target = id || (aimed && now - aimed.at < 500 ? aimed.id : null);
+    if(pinchStarted && target){
+      pulling = { id:target, since:now, lostAt:null };
+      env.point(target);
+      env.pull(target, 0);
+      return { claimed:true, status:'pulling' };
     }
     return { claimed:true, status: id ? 'pointing' : 'shelf' };
   }
@@ -747,16 +789,24 @@ const pointerEnv = {
   cardOpen: () => !!document.getElementById('recipe-modal')?.classList.contains('open') || !!window.recipeShelf?.open,
   shelfActive: () => !isCoverOpen() && !!window.recipeShelf &&
     !!document.getElementById('recipes-panel')?.classList.contains('active'),
-  cakeAt(u, v){
-    const x = u * innerWidth, y = v * innerHeight, pad = 8;
-    const hit = window.recipeShelf.cakes().find(el => {
-      const r = el.getBoundingClientRect();
-      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
-    });
-    return hit ? hit.dataset.recipe : null;
+  // The cake under the fingertip, forgiving and a little sticky: the cake
+  // already aimed at keeps it until the fingertip is clearly off it, and a
+  // near miss counts for the nearest cake.
+  cakeAt(u, v, current){
+    const x = u * innerWidth, y = v * innerHeight;
+    const cakes = window.recipeShelf.cakes();
+    const near = (el, pad) => { const r = el.getBoundingClientRect(); return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad; };
+    const held = current && cakes.find(el => el.dataset.recipe === current);
+    if(held && near(held, 36)) return current;
+    const hit = cakes.find(el => near(el, 14));
+    if(hit) return hit.dataset.recipe;
+    let best = null, bestD = 70;
+    cakes.forEach(el => { const r = el.getBoundingClientRect(); const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) - Math.min(r.width, r.height) / 2; if(d < bestD){ bestD = d; best = el; } });
+    return best ? best.dataset.recipe : null;
   },
   point: id => window.recipeShelf?.point(id),
   pick: id => window.recipeShelf.pick(id),
+  pull: (id, p) => window.recipeShelf?.pull(id, p),
   // The oven mitt on the shelf. state: 'idle' | 'point' | 'pinch' | 'hide';
   // c null (no hand in view): it waits where it was, faded, or in the middle
   // of the shelf if it hasn't been anywhere yet.
@@ -768,13 +818,16 @@ const pointerEnv = {
     if(!c){
       if(!el.dataset.placed){
         const r = document.querySelector('#recipes-panel .cabinet, #recipes-panel .shelf')?.getBoundingClientRect();
-        el.style.transform = r ? `translate(${r.left + r.width / 2}px, ${r.top + r.height * .45}px)` : `translate(${innerWidth / 2}px, ${innerHeight / 2}px)`;
+        el.style.translate = r ? `${r.left + r.width / 2}px ${r.top + r.height * .45}px` : `${innerWidth / 2}px ${innerHeight / 2}px`;
       }
       el.className = 'hf-cursor parked';
       return;
     }
     el.dataset.placed = '1';
-    el.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
+    // `translate`, not `transform`: the mitt's scale and tilt (cake-card.css)
+    // are applied after a transform and would scale the position with it,
+    // drawing the mitt away from where the hand points.
+    el.style.translate = `${c.u * innerWidth}px ${c.v * innerHeight}px`;
     el.className = 'hf-cursor ' + state;
   },
   scrollCard(amount){
