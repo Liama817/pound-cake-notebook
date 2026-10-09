@@ -4,12 +4,13 @@
 //             bare), comes toward you, and turns over into its recipe card.
 //             Closing plays it backwards, and the cake settles back onto
 //             its plate.
-//   Marking   "Baked it" (with the day) and "Want to bake" are rubber
-//             stamps, inked onto a small paper tag taped to the photo's
-//             corner, where the ink always has clean paper under it. Held by
-//             hand, the stamp's shadow comes down onto the tag as the gesture
-//             is held, and the ink lands when it touches; by the buttons, it
-//             comes down at once. The stamp stays on the card.
+//   Marking   "Baked it" and "Want to bake" are postage stamps in the
+//             photo's corner (the recipe's own painted slice, or a heart),
+//             postmarked with the day. Held by hand, the blank stamp arrives
+//             and the postmark's shadow comes down as the gesture is held;
+//             then the stamp shows its face and the postmark is inked over
+//             it. By the buttons, it all comes at once. The stamp stays on
+//             the card.
 //   Closing   holding an open palm lets the card sink a little, as if being
 //             put away, before it turns back into the cake.
 //   Key       in hand mode, the card's foot says which gesture does what.
@@ -21,6 +22,9 @@
 Object.assign(T.en, {
   'cc.made': 'Baked it',
   'cc.wish': 'Want to bake',
+  'cc.soon': 'one day soon',
+  'cc.pm.made': 'BAKED',
+  'cc.pm.wish': 'SOON',
   'cc.key.made': 'hold · baked it',
   'cc.key.wish': 'hold · want to bake',
   'cc.key.close': 'hold · close',
@@ -28,6 +32,9 @@ Object.assign(T.en, {
 Object.assign(T.zh, {
   'cc.made': '做过了',
   'cc.wish': '想做',
+  'cc.soon': '总有一天',
+  'cc.pm.made': '做过',
+  'cc.pm.wish': '想做',
   'cc.key.made': '保持 · 做过了',
   'cc.key.wish': '保持 · 想做',
   'cc.key.close': '保持 · 关闭',
@@ -220,15 +227,33 @@ async function close(btn, id, hide){
   ], { duration:320, easing:'ease-out' });
 }
 
-// ── The stamp, on a paper tag taped to the photo's corner ──
+// ── The stamp: a postage stamp in the photo's corner, postmarked with the day ──
 
 const tag = document.createElement('div');
 tag.className = 'cc-tag';
 tag.hidden = true;
-tag.innerHTML = '<span class="cc-tape" aria-hidden="true"></span><span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>';
+tag.innerHTML = '<span class="cc-sheet" aria-hidden="true"><span class="cc-paper"></span></span>'
+  + '<span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>'
+  // the postmark: a round date stamp with wavy lines, inked over the stamp's edge
+  + '<svg class="cc-postmark" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">'
+  + '<circle cx="44" cy="60" r="34"/><circle cx="44" cy="60" r="27" stroke-width="1.2"/>'
+  + '<path d="M78 44q8-5 16 0t16 0t16 0M78 54q8-5 16 0t16 0t16 0M78 64q8-5 16 0t16 0t16 0M78 74q8-5 16 0t16 0t16 0"/></g>'
+  + '<text class="pm-top" x="44" y="56" text-anchor="middle"></text><text class="pm-day" x="44" y="73" text-anchor="middle"></text></svg>';
 card.appendChild(tag);
 const shadow = tag.querySelector('.cc-shadow');
 const ink = tag.querySelector('.cc-ink');
+const postmark = tag.querySelector('.cc-postmark');
+// The perforated edge: a mask with small bites all round (cake-card.css).
+{
+  const w = 112, h = 138, step = 9.2, r = 3.1;
+  let bites = '';
+  for(let x = step / 2; x < w; x += step) bites += `<circle cx='${x}' cy='0' r='${r}'/><circle cx='${x}' cy='${h}' r='${r}'/>`;
+  for(let y = step / 2; y < h; y += step) bites += `<circle cx='0' cy='${y}' r='${r}'/><circle cx='${w}' cy='${y}' r='${r}'/>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' preserveAspectRatio='none'><mask id='p'><rect width='${w}' height='${h}' fill='white'/>${bites}</mask><rect width='${w}' height='${h}' mask='url(#p)'/></svg>`;
+  tag.style.setProperty('--perf', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+}
+// The stamp's picture: this recipe's own painted slice from the shelf (a heart for want to bake).
+const cakePic = id => document.querySelector(`.slice[data-recipe="${id}"] .slice-img`)?.currentSrc || '';
 
 // "Baked it" carries the day it was marked.
 const madeKey = id => 'rj-made-' + id;
@@ -237,11 +262,11 @@ function bakedOn(id){
   if(v === '1'){ v = new Date().toISOString().slice(0, 10); localStorage.setItem(madeKey(id), v); }
   return /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null;
 }
-function dayText(iso){
+function dayText(iso, withYear = true){
   if(!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
-  if(currentLang === 'zh') return `${y}.${m}.${d}`;
-  return `${d} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[m - 1]} ${y}`;
+  if(currentLang === 'zh') return withYear ? `${y}.${m}.${d}` : `${m}.${d}`;
+  return `${d} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[m - 1]}` + (withYear ? ` ${y}` : '');
 }
 
 // What the tag shows for the open card: one stamp, or nothing.
@@ -249,13 +274,19 @@ function markOf(id){
   const s = id ? getStampState(id) : {};
   return s.made ? 'made' : s.wish ? 'wish' : null;
 }
+// The stamp's face (what it says and shows) and its postmark.
 function inkFor(kind){
   ink.className = 'cc-ink ' + kind;
-  const sub = kind === 'made' ? dayText(bakedOn(rmCurrentId)) : nameOf(rmCurrentId);
-  ink.innerHTML = `<b></b><span class="cc-mark">${kind === 'made' ? '✓' : '♡'}</span><i></i>`;
+  const iso = bakedOn(rmCurrentId);
+  const sub = kind === 'made' ? dayText(iso) : t('cc.soon');
+  const pic = (kind === 'made' && cakePic(rmCurrentId)) || 'images/stamp/heart@2x.png';
+  ink.innerHTML = '<b></b><img alt=""><i></i>';
   ink.querySelector('b').textContent = t('cc.' + kind);
+  ink.querySelector('img').src = pic;
   ink.querySelector('i').textContent = sub;
   ink.setAttribute('aria-label', t('cc.' + kind) + (sub ? ', ' + sub : ''));
+  postmark.querySelector('.pm-top').textContent = t('cc.pm.' + kind);
+  postmark.querySelector('.pm-day').textContent = kind === 'made' ? dayText(iso, false) : '♡';
 }
 // The stamp's shadow is driven by plain style changes and a CSS transition
 // (never by element.animate, whose finished effects can linger and pin it).
@@ -279,8 +310,9 @@ function showMark(){
 
 let pressed = 0;   // how far the hand has brought the stamp down (0–1)
 
-// Lands the stamp: from a hand hold the shadow is already down; from a
-// button it comes down quickly first.
+// Lands the stamp: the postage stamp shows its face, then the postmark is
+// inked over it. From a hand hold the postmark's shadow is already down;
+// from a button it comes down quickly first.
 function stamp(kind){
   inkFor(kind);
   const fresh = tag.hidden;
@@ -289,16 +321,23 @@ function stamp(kind){
   if(fresh){ tag.classList.remove('arriving'); reflow(tag); tag.classList.add('arriving'); }
   const lead = pressed > .9 ? 0 : (fresh ? 380 : 160);
   if(lead){ shadowTo(0, 1.35); reflow(shadow); shadowTo(1, 1, lead); }
-  setTimeout(() => shadowTo(0, 1, 220, 'ease-out'), lead);   // it lifts as the ink lands
+  const markAt = lead + 260;   // the postmark comes down a moment after the face shows
+  setTimeout(() => shadowTo(0, 1, 220, 'ease-out'), markAt);   // its shadow lifts as the ink lands
   ink.animate([
-    { opacity:0, transform:'scale(1.04)', filter:'blur(1.2px)' },
-    { opacity:.55, transform:'scale(1.04)', filter:'blur(.8px)', offset:.12 },
-    { opacity:.95, transform:'scale(1)', filter:'blur(0)' },
-  ], { duration:480, delay:lead, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards' });
+    { opacity:0, transform:'scale(.94)' },
+    { opacity:1, transform:'scale(1.02)', offset:.6 },
+    { opacity:1, transform:'scale(1)' },
+  ], { duration:360, delay:lead, easing:'cubic-bezier(.2,.7,.3,1)', fill:'backwards' });
+  postmark.animate([
+    { opacity:0, transform:'scale(1.25)', filter:'blur(1.5px)' },
+    { opacity:.6, filter:'blur(.6px)', offset:.35 },
+    { opacity:.92, transform:'scale(.97)', offset:.7 },
+    { opacity:.92, transform:'scale(1)', filter:'blur(0)' },
+  ], { duration:420, delay:markAt, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards' });
   card.animate([
     { transform:'none' }, { transform:'translateY(2px)', offset:.3 }, { transform:'none' },
-  ], { duration:220, delay:lead, easing:'ease-out' });
-  setTimeout(() => burst(kind), lead + 120);
+  ], { duration:220, delay:markAt, easing:'ease-out' });
+  setTimeout(() => burst(kind), markAt + 120);
   pressed = 0;
 }
 

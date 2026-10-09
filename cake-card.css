@@ -45,48 +45,55 @@
 #recipe-modal.cc-arrived .rm-card{animation:none}
 #rm-card{position:relative}
 
-/* ── the stamp: inked on a small paper tag taped to the photo's corner ── */
+/* ── the stamp: a postage stamp in the photo's corner, postmarked with the day ── */
 .cc-tag{
-  position:absolute;z-index:40;right:30px;top:34px;width:256px;height:150px;
-  background:#FBF6EA linear-gradient(rgba(255,255,255,.4), rgba(255,255,255,0));
-  border-radius:3px;box-shadow:0 4px 12px rgba(40,25,10,.22);
-  transform:rotate(4deg);pointer-events:none;
+  position:absolute;z-index:40;right:44px;top:34px;width:124px;height:153px;
+  rotate:6deg;pointer-events:none;
 }
 .cc-tag[hidden]{display:none}
-/* the tag is stuck on as it's first needed */
-.cc-tag.arriving{animation:cc-tag-in .38s cubic-bezier(.2,.9,.3,1.2) both}
+/* the paper, with its perforated edge (the mask is made in cake-card.js); the
+   shadow is on a wrapper, since a mask would cut a shadow of its own away */
+.cc-sheet{position:absolute;inset:0;filter:drop-shadow(0 3px 4px rgba(40,25,10,.35))}
+.cc-paper{position:absolute;inset:0;background:#FFFDF7;
+  -webkit-mask:var(--perf) 0 0/100% 100% no-repeat;mask:var(--perf) 0 0/100% 100% no-repeat}
+/* it's put down as it's first needed */
+.cc-tag.arriving{animation:cc-tag-in .5s cubic-bezier(.25,.8,.3,1.1) both}
 @keyframes cc-tag-in{
-  from{opacity:0;transform:translate(14px,-18px) rotate(14deg) scale(.92)}
-  to  {opacity:1;transform:rotate(4deg)}
+  from{opacity:0;transform:translate(40px,-34px) rotate(16deg)}
+  60% {opacity:1;transform:translate(0,0) rotate(-3deg)}
+  to  {opacity:1;transform:none}
 }
-.cc-tape{
-  position:absolute;left:50%;top:-10px;width:84px;height:24px;margin-left:-42px;
-  background:rgba(226,184,74,.55);transform:rotate(-4deg);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 4px,#000 calc(100% - 4px),transparent 100%);
-          mask-image:linear-gradient(90deg,transparent 0,#000 4px,#000 calc(100% - 4px),transparent 100%);
-}
-/* the stamp's shadow, coming down onto the tag */
+/* the postmark's shadow, coming down over the stamp's edge */
 .cc-shadow{
-  position:absolute;inset:26px 22px;border-radius:50% / 46%;opacity:0;transform:scale(1.35) rotate(-6deg);
+  position:absolute;left:-27px;top:60px;width:70px;height:70px;border-radius:50%;opacity:0;transform:scale(1.35) rotate(-6deg);
   background:radial-gradient(closest-side, rgba(92,58,24,.42) 60%, rgba(92,58,24,.16) 85%, rgba(92,58,24,0));
   filter:blur(4px);
 }
-/* rubber-stamp ink: no fill, uneven, soaked into the paper */
+/* the stamp's face: a tinted frame with the picture, what it means, and when */
 .cc-ink{
-  position:absolute;left:50%;top:50%;translate:-50% -50%;rotate:-6deg;
-  display:none;flex-direction:column;align-items:center;
-  padding:.9em 1.5em .75em;border:2.5px solid currentColor;border-radius:50% / 46%;
-  font-family:var(--font-serif),'Noto Serif SC',serif;text-transform:uppercase;letter-spacing:.14em;line-height:1.05;
-  white-space:nowrap;mix-blend-mode:multiply;opacity:.95;
-  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  -webkit-mask-size:220px;mask-size:220px;
+  position:absolute;inset:11px;display:none;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 6px;
+  border:.8px solid currentColor;
+  font-family:var(--font-serif),'Noto Serif SC',serif;line-height:1.1;text-align:center;
 }
 .cc-ink.made,.cc-ink.wish{display:flex}
-.cc-ink.made{color:#4F6B3A}
-.cc-ink.wish{color:#B0463A}
-.cc-ink b{font-weight:600;font-size:24px}
-.cc-ink .cc-mark{font-size:15px;letter-spacing:0;margin-top:2px}
-.cc-ink i{margin-top:3px;font-family:var(--font-lora),'Noto Serif SC',serif;font-size:12px;letter-spacing:.08em;text-transform:none}
+.cc-ink.made{color:#4F6B3A;background:#EEF3E4}
+.cc-ink.wish{color:#B0463A;background:#FBEAE6}
+.cc-ink b{font-weight:600;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.cc-ink.wish b{letter-spacing:.05em}   /* the longer words still fit on one line */
+.cc-ink img{flex:1;min-height:0;width:88%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(60,35,10,.18))}
+.cc-ink i{font-family:var(--font-lora),'Noto Serif SC',serif;font-size:11.5px;white-space:nowrap}
+/* the postmark: rubber-stamp ink over the stamp's edge and the photo */
+.cc-postmark{
+  position:absolute;left:-32px;top:40px;width:110px;height:110px;rotate:-14deg;display:none;overflow:visible;
+  mix-blend-mode:multiply;opacity:.92;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size:150px;mask-size:150px;
+}
+.cc-ink.made ~ .cc-postmark,.cc-ink.wish ~ .cc-postmark{display:block}
+.cc-ink.made ~ .cc-postmark{color:#4F6B3A}
+.cc-ink.wish ~ .cc-postmark{color:#B0463A}
+.cc-postmark text{fill:currentColor;font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:600;font-size:10px;letter-spacing:1.2px}
+.cc-postmark .pm-day{font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-weight:400;font-size:12px;letter-spacing:0}
 
 /* the little burst of painted stickers as the stamp lands: each pops up
    with a squash, then floats away swaying, like a balloon let go */
@@ -135,11 +142,12 @@ body.hf-on #rm-card .rm-body-scroll{padding-bottom:58px}
   body.hf-on #rm-card .rm-body-scroll{padding-bottom:104px}
   .cc-glyph{width:20px;height:20px}
   .cc-key > span + span{border-left:0}
-  .cc-tag{right:12px;top:18px;width:164px;height:100px}
-  .cc-shadow{inset:16px 12px}
-  .cc-ink b{font-size:14px;letter-spacing:.1em}
-  .cc-ink i{font-size:10px}
-  .cc-ink{padding:.7em 1.1em .6em;border-width:2px}
+  .cc-tag{right:18px;top:18px;width:84px;height:104px}
+  .cc-ink{inset:7px;padding:4px 2px}
+  .cc-ink b{font-size:7.5px;letter-spacing:.1em}
+  .cc-ink i{font-size:8.5px}
+  .cc-postmark{left:-22px;top:26px;width:76px;height:76px}
+  .cc-shadow{left:-19px;top:40px;width:48px;height:48px}
 }
 
 /* ── pointing by hand at the shelf: the oven mitt, and a paper tag ── */
