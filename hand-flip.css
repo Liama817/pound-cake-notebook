@@ -156,10 +156,10 @@ body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover wai
 }
 
 /* ── Hand mode on a wide screen ──
-   The welcome: a big rounded camera window on the right, the closed
-   notebook waiting at the left edge. After the hello, the window shrinks
-   into a small one in the bottom-right corner and the notebook glides to
-   the centre, sized so the window never covers it. Phones keep the
+   The welcome: only you, in a big rounded camera window in the middle;
+   the notebook waits out of sight. After the hello, the window shrinks
+   into a small one in the bottom-right corner and the notebook glides in
+   from the left to the centre, sized so the window never covers it. Phones keep the
    centred mirror and the window above the toggle. */
 @media (min-width:701px){
   :root{--hf-w:clamp(180px, 15vw, 240px)}
@@ -171,15 +171,16 @@ body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover wai
   body.hf-on .hb-book,body.hf-intro .hb-book{
     width:min(calc(100vw - 2 * var(--hf-gap)), calc((100vh - 190px) * 1.484), 1180px);
   }
-  /* the closed cover peeks in from the left while the camera has the stage */
-  body.hf-intro .hb-stage.closed .hb-book{transform:translateX(calc(-50% - 28vw))}
+  /* the notebook stays out of sight while the camera has the stage, then glides in */
+  body.hf-intro .hb-stage.closed .hb-book{transform:translateX(calc(-25% - 22vw));opacity:0}
+  body.hf-on .hb-book,body.hf-intro .hb-book{transition:transform .9s cubic-bezier(.45,0,.2,1), opacity .6s ease}
 
   /* dims the landing behind, but not the notebook */
   .hf-backdrop{z-index:510;background:rgba(10,6,2,.5)}
 
-  /* the big window: clean and rounded, right of centre */
+  /* the big window: clean and rounded, in the middle, the one thing on screen */
   .hf-panel.hero{
-    inset:0 5vw 0 auto;margin:auto 0;width:46vw;
+    inset:0;margin:auto;width:min(60vw, calc((100vh - 200px) * 4 / 3));
     padding:0;background:none;border:0;box-shadow:none;
   }
   .hf-panel.greeted{border:0;box-shadow:none}
