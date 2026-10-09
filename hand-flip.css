@@ -162,7 +162,7 @@ body.hf-on .hf-sayhi{visibility:hidden}   /* hand mode already on: the cover wai
    from the left to the centre, sized so the window never covers it. Phones keep the
    centred mirror and the window above the toggle. */
 @media (min-width:701px){
-  :root{--hf-w:clamp(180px, 15vw, 240px)}
+  :root{--hf-w:clamp(210px, 18vw, 290px)}
   /* the notebook keeps the same clear margin on both sides, so it stays centred */
   body.hf-on,body.hf-intro{--hf-gap:calc(var(--hf-w) + 2.6rem)}
   html body.hf-on #recipes-panel.active,
