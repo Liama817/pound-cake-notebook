@@ -205,13 +205,15 @@
   white-space:nowrap;
 }
 .tag-stamp{
-  position:absolute;top:-.6rem;right:-.6rem;background:#FFFDF7;
-  font-family:var(--font-body);font-size:.8rem;font-weight:600;letter-spacing:.05em;white-space:nowrap;
-  padding:.12rem .5rem;border:1.5px solid currentColor;border-radius:3px;transform:rotate(5deg);
-  box-shadow:0 1px 2px rgba(70,45,18,.18);z-index:2;
+  /* a small rubber stamp inked on the label, matching the big one on the card */
+  position:absolute;top:-.6rem;right:-.6rem;z-index:2;
+  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;
+  padding:.12rem .55rem;border:1.5px solid currentColor;border-radius:50% / 46%;transform:rotate(-7deg);
+  background:rgba(251,246,234,.92);mix-blend-mode:multiply;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");-webkit-mask-size:120px;mask-size:120px;
 }
-.tag-stamp.made{color:#4d6e36}
-.tag-stamp.wish{color:#a34a34}
+.tag-stamp.made{color:#4F6B3A}
+.tag-stamp.wish{color:#B0463A}
 
 /* Hover / focus / hand pointing: the plate is picked up a little.
    In the cabinet the cut-out and its bare-shelf patch appear first. */

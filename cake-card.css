@@ -40,101 +40,106 @@
 #recipe-modal.cc-arrived .rm-card{animation:none}
 #rm-card{position:relative}
 
-/* ── holding a gesture: big, in the middle of the card ── */
-.cc-hold{
-  --p:0%;--c:#4d6e36;
-  position:absolute;z-index:40;left:50%;top:50%;translate:-50% -50%;
-  width:190px;height:190px;border-radius:50%;
-  background:conic-gradient(var(--c) 0 var(--p), color-mix(in srgb, var(--c) 18%, transparent) var(--p) 100%);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 14px 40px rgba(0,0,0,.35);pointer-events:none;
-  animation:cc-pop .22s cubic-bezier(.3,1.6,.5,1) both;
+/* ── the stamp: inked on a small paper tag taped to the photo's corner ── */
+.cc-tag{
+  position:absolute;z-index:40;right:30px;top:34px;width:256px;height:150px;
+  background:#FBF6EA linear-gradient(rgba(255,255,255,.4), rgba(255,255,255,0));
+  border-radius:3px;box-shadow:0 4px 12px rgba(40,25,10,.22);
+  transform:rotate(4deg);pointer-events:none;
 }
-.cc-hold[hidden]{display:none}
-.cc-hold[data-kind="wish"]{--c:#a34a34}
-.cc-hold[data-kind="close"]{--c:#7A6448}
-.cc-hold > div{
-  width:160px;height:160px;border-radius:50%;background:#FFFDF7;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
+.cc-tag[hidden]{display:none}
+/* the tag is stuck on as it's first needed */
+.cc-tag.arriving{animation:cc-tag-in .38s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes cc-tag-in{
+  from{opacity:0;transform:translate(14px,-18px) rotate(14deg) scale(.92)}
+  to  {opacity:1;transform:rotate(4deg)}
 }
-.cc-hold-emoji{font-size:78px;line-height:1}
-.cc-hold small{margin-top:8px;font-family:var(--font-body),'Noto Serif SC',serif;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--c)}
-@keyframes cc-pop{from{scale:.6;opacity:0}to{scale:1;opacity:1}}
+.cc-tape{
+  position:absolute;left:50%;top:-10px;width:84px;height:24px;margin-left:-42px;
+  background:rgba(226,184,74,.55);transform:rotate(-4deg);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 4px,#000 calc(100% - 4px),transparent 100%);
+          mask-image:linear-gradient(90deg,transparent 0,#000 4px,#000 calc(100% - 4px),transparent 100%);
+}
+/* the stamp's shadow, coming down onto the tag */
+.cc-shadow{
+  position:absolute;inset:26px 22px;border-radius:50% / 46%;opacity:0;transform:scale(1.35) rotate(-6deg);
+  background:radial-gradient(closest-side, rgba(92,58,24,.42) 60%, rgba(92,58,24,.16) 85%, rgba(92,58,24,0));
+  filter:blur(4px);
+}
+/* rubber-stamp ink: no fill, uneven, soaked into the paper */
+.cc-ink{
+  position:absolute;left:50%;top:50%;translate:-50% -50%;rotate:-6deg;
+  display:none;flex-direction:column;align-items:center;
+  padding:.9em 1.5em .75em;border:2.5px solid currentColor;border-radius:50% / 46%;
+  font-family:var(--font-serif),'Noto Serif SC',serif;text-transform:uppercase;letter-spacing:.14em;line-height:1.05;
+  white-space:nowrap;mix-blend-mode:multiply;opacity:.95;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.6'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size:220px;mask-size:220px;
+}
+.cc-ink.made,.cc-ink.wish{display:flex}
+.cc-ink.made{color:#4F6B3A}
+.cc-ink.wish{color:#B0463A}
+.cc-ink b{font-weight:600;font-size:24px}
+.cc-ink .cc-mark{font-size:15px;letter-spacing:0;margin-top:2px}
+.cc-ink i{margin-top:3px;font-family:var(--font-lora),'Noto Serif SC',serif;font-size:12px;letter-spacing:.08em;text-transform:none}
 
-/* ── the stamp ── */
-.cc-stamp{
-  position:absolute;z-index:45;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-10deg);
-  padding:.25em .5em .2em;border:6px double currentColor;border-radius:10px;
-  background:rgba(255,251,240,.93);box-shadow:0 10px 30px rgba(0,0,0,.18);
-  font-family:var(--font-serif),'Noto Serif SC',serif;font-weight:600;font-size:clamp(2.4rem,6vw,4.4rem);
-  letter-spacing:.06em;text-transform:uppercase;line-height:1;white-space:nowrap;text-align:center;
-  pointer-events:none;
-  /* worn ink */
-  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.1 1.55'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
-          mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.1 1.55'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation:cc-thump .3s cubic-bezier(.2,.9,.3,1.25) both;
-}
-.cc-stamp small{display:block;margin-top:.35em;font-family:var(--font-body),'Noto Serif SC',serif;font-weight:400;font-size:.22em;letter-spacing:.3em}
-.cc-stamp.made{color:#3f6a2c}
-.cc-stamp.wish{color:#a8382c}
-@keyframes cc-thump{
-  from{transform:translate(-50%,-50%) rotate(-4deg) scale(2.2);opacity:0}
-  60% {opacity:1}
-  to  {transform:translate(-50%,-50%) rotate(-10deg) scale(1);opacity:1}
-}
-.cc-heart{
-  position:absolute;z-index:46;top:58%;font-size:clamp(1.8rem,3.4vw,2.6rem);pointer-events:none;opacity:0;
-  animation:cc-float 1.8s ease-out both;
-}
-@keyframes cc-float{
-  0%  {opacity:0;transform:translateY(0) rotate(var(--r)) scale(.4)}
-  15% {opacity:1;transform:translateY(-20px) rotate(var(--r)) scale(1.1)}
-  100%{opacity:0;transform:translateY(-220px) rotate(var(--r)) scale(1)}
-}
-
-/* ── the gesture key, in hand mode ── */
+/* ── the gesture key, in hand mode: a cream paper strip at the card's foot ── */
 .cc-key{display:none}
 body.hf-on .cc-key{
   position:absolute;z-index:30;left:50%;bottom:14px;translate:-50% 0;
-  display:flex;gap:8px;pointer-events:none;
+  display:flex;gap:4px;pointer-events:none;
+  background:#FBF6EA;border:1px solid rgba(94,78,59,.2);border-radius:3px;padding:6px 10px;
+  box-shadow:0 4px 12px rgba(40,25,10,.18);
 }
 .cc-key > span{
-  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
-  background:#2E2418;color:#FFF6E6;border-radius:999px;padding:7px 16px 7px 11px;
-  font-family:var(--font-body),'Noto Serif SC',serif;font-size:16px;letter-spacing:.03em;
-  box-shadow:0 6px 16px rgba(0,0,0,.25);
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:0 10px;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:15px;color:#5E4E3B;
 }
-.cc-key b{font-size:24px;font-weight:400;line-height:1}
+.cc-key > span + span{border-left:1px solid rgba(94,78,59,.2)}
+.cc-key b{font-size:19px;font-weight:400;font-style:normal;line-height:1}
 @media (max-width:700px){
-  body.hf-on .cc-key{flex-direction:column;align-items:center;gap:5px;bottom:10px}
-  .cc-key > span{font-size:13px;padding:5px 12px 5px 9px}
-  .cc-key b{font-size:19px}
-  .cc-stamp{font-size:1.55rem;border-width:4px;letter-spacing:.04em}
-  .cc-hold{width:150px;height:150px}
-  .cc-hold > div{width:126px;height:126px}
-  .cc-hold-emoji{font-size:60px}
+  body.hf-on .cc-key{flex-direction:column;align-items:center;gap:2px;bottom:10px}
+  .cc-key > span{font-size:13px}
+  .cc-key > span + span{border-left:0}
+  .cc-tag{right:12px;top:18px;width:164px;height:100px}
+  .cc-shadow{inset:16px 12px}
+  .cc-ink b{font-size:14px;letter-spacing:.1em}
+  .cc-ink i{font-size:10px}
+  .cc-ink{padding:.7em 1.1em .6em;border-width:2px}
 }
 
-/* ── pointing by hand at the shelf: the fingertip, and the cake's name ── */
+/* ── pointing by hand at the shelf: the oven mitt, and a paper tag ── */
+/* the mitt's fingertip is the point (38, 14 in its 96px picture) */
 .hf-cursor{
-  width:68px !important;height:68px !important;margin:-34px 0 0 -34px !important;
-  border:0 !important;background:#FFFDF7 !important;
-  box-shadow:0 0 0 3px #E2B84A, 0 8px 22px rgba(0,0,0,.35) !important;
-  display:flex;align-items:center;justify-content:center;
+  width:96px !important;height:96px !important;margin:-14px 0 0 -38px !important;
+  border:0 !important;border-radius:0 !important;box-shadow:none !important;
+  background:url("./images/cursor/mitt.png") center/contain no-repeat !important;
+  background-image:-webkit-image-set(url("./images/cursor/mitt.png") 1x, url("./images/cursor/mitt@2x.png") 2x) !important;
+  filter:drop-shadow(0 10px 10px rgba(60,35,10,.3));
+  transform-origin:38px 14px;
+  transition:opacity .35s ease, scale .18s ease, rotate .18s ease;
 }
-.hf-cursor::after{content:'👆';font-size:36px;line-height:1}
-.hf-cursor.pinch::after{content:'🤏'}
+.hf-cursor.point{scale:1.06}
+@media (min-width:1200px){ .hf-cursor:not(.pinch){scale:1.18} .hf-cursor.point{scale:1.26} }
+/* a pinch: the mitt squeezes */
+.hf-cursor.pinch{scale:.86;rotate:6deg}
+/* no hand in view: the mitt waits where it was, faded, breathing */
+.hf-cursor.parked{opacity:.5;animation:cc-breathe 2.4s ease-in-out infinite}
+@keyframes cc-breathe{50%{translate:0 -5px}}
 .cc-nametag{
-  position:fixed;z-index:725;translate:-50% -100%;pointer-events:none;
-  background:#2E2418;color:#FFF6E6;border-radius:14px;padding:9px 18px 10px;text-align:center;
-  font-family:var(--font-serif),'Noto Serif SC',serif;font-size:22px;line-height:1.15;white-space:nowrap;
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
-  animation:cc-pop .2s cubic-bezier(.3,1.6,.5,1) both;
+  position:fixed;z-index:725;translate:-50% 0;rotate:-2deg;pointer-events:none;
+  background:#FBF6EA;color:#5E4E3B;border:1px solid rgba(94,78,59,.25);border-radius:3px;
+  padding:6px 13px 7px 22px;white-space:nowrap;
+  font-family:var(--font-lora),'Noto Serif SC',serif;font-style:italic;font-size:15px;line-height:1.2;
+  box-shadow:0 3px 8px rgba(60,40,15,.18);
+  animation:cc-swing .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% -12px;
 }
-.cc-nametag small{display:block;margin-top:3px;font-family:var(--font-body),'Noto Serif SC',serif;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#E2B84A}
-.cc-nametag::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-bottom:0;border-top-color:#2E2418}
+/* the tag hangs from the cake's label on a string, through a little eyelet */
+.cc-nametag::before{content:'';position:absolute;left:50%;top:-12px;width:1px;height:12px;background:rgba(94,78,59,.55)}
+.cc-nametag::after{content:'';position:absolute;left:8px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;border:1px solid rgba(94,78,59,.5);background:#fff}
 .cc-nametag[hidden]{display:none}
+@keyframes cc-swing{from{opacity:0;rotate:-14deg}to{opacity:1;rotate:-2deg}}
 
 @media (prefers-reduced-motion:reduce){
-  .cc-hold,.cc-stamp,.cc-nametag{animation:none}
+  .cc-tag.arriving,.cc-nametag,.hf-cursor.parked{animation:none}
 }

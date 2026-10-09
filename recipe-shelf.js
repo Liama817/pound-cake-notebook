@@ -15,13 +15,13 @@ Object.assign(T.en, {
   'shelf.count': '{n} cakes on the shelf',
   'shelf.made': '✓ Baked',
   'shelf.wish': '♡ Want to bake',
-  'shelf.pinch': 'pinch 🤏 to open',
+  'shelf.pinch': 'pinch to take it out',
 });
 Object.assign(T.zh, {
   'shelf.count': '架上 {n} 款蛋糕',
   'shelf.made': '✓ 做过了',
   'shelf.wish': '♡ 想做',
-  'shelf.pinch': '捏一下 🤏 打开',
+  'shelf.pinch': '捏一下，把它取出来',
 });
 
 const LIFT_MS = 380;   // the cake rises off the shelf before the card opens
@@ -209,7 +209,7 @@ window.buildRecipesPage = buildShelf;
 if(document.getElementById('recipes-panel')?.classList.contains('active')) buildShelf();
 
 // The hand tracker lights the cake under the fingertip, as a mouse hover would.
-// Pointing also shows the cake's name above it, big enough to read in a video.
+// Pointing also hangs a small paper tag from the cake's label, saying what to do.
 let nametag = null, nametagFor = null;
 function point(id){
   document.querySelectorAll('#recipes-panel .slice').forEach(btn => {
@@ -219,21 +219,19 @@ function point(id){
     nametag = document.createElement('div');
     nametag.className = 'cc-nametag';
     nametag.hidden = true;
-    nametag.innerHTML = '<span></span><small></small>';
     document.body.appendChild(nametag);
   }
-  const img = id && document.querySelector(`.slice[data-recipe="${id}"] .slice-img`);
-  if(!img){ nametag.hidden = true; nametagFor = null; return; }
-  const r = img.getBoundingClientRect();
+  const label = id && document.querySelector(`.slice[data-recipe="${id}"] .slice-tag`);
+  if(!label){ nametag.hidden = true; nametagFor = null; return; }
+  const r = label.getBoundingClientRect();
   nametag.style.left = (r.left + r.width / 2) + 'px';
-  nametag.style.top = (r.top - 6) + 'px';
+  nametag.style.top = (r.bottom + 12) + 'px';
   if(nametagFor === id) return;
   nametagFor = id;
-  window.cakeCard?.preload(id);
-  nametag.firstChild.textContent = t('recipe.' + id) || RJ[id].name;
-  nametag.lastChild.textContent = t('shelf.pinch');
+  nametag.textContent = t('shelf.pinch');
   nametag.hidden = false;
-  nametag.style.animation = 'none'; nametag.offsetWidth; nametag.style.animation = '';   // pop again for each cake
+  nametag.style.animation = 'none'; nametag.offsetWidth; nametag.style.animation = '';   // swing in again for each cake
+  window.cakeCard?.preload(id);
 }
 
 // For the hand tracker (and tests): the cakes on the shelf, pointing at one, and picking it.

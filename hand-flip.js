@@ -577,7 +577,7 @@ function createPointer(env){
 
     // ── Recipe card open ──
     if(env.cardOpen()){
-      env.point(null); env.cursor(null); cursor = null;
+      env.point(null); env.cursor(null, 'hide'); cursor = null;
       if(pinching){
         if(lastPinchY !== null) env.scrollCard((lastPinchY - tip.y) * SCROLL_GAIN);   // hand up = read further down
         lastPinchY = tip.y;
@@ -606,24 +606,26 @@ function createPointer(env){
     // ── Shelf showing ──
     hold = { kind:null, since:0, fired:false };
     lastPinchY = null;
-    if(!env.shelfActive()){ env.point(null); env.cursor(null); cursor = null; return { claimed: now < quietUntil, status:null }; }
-    if(!shape.pointing && !pinching){
-      env.point(null); env.cursor(null); cursor = null;
-      return { claimed: now < quietUntil, status:'shelf' };
-    }
+    if(!env.shelfActive()){ env.point(null); env.cursor(null, 'hide'); cursor = null; return { claimed: now < quietUntil, status:null }; }
     // The middle of the camera frame covers the whole window, so the arm needn't stretch.
     const u = clamp01((1 - tip.x - 0.2) / 0.6);
     const v = clamp01((tip.y - 0.15) / 0.6);
     cursor = cursor ? { u: cursor.u * 0.5 + u * 0.5, v: cursor.v * 0.5 + v * 0.5 } : { u, v };
+    // the mitt follows the hand whatever its shape, so it's always easy to find;
+    // only a pointing finger picks out a cake
+    if(!shape.pointing && !pinching){
+      env.point(null); env.cursor(cursor, 'idle');
+      return { claimed: now < quietUntil, status:'shelf' };
+    }
     // lowering or relaxing the hand after pointing mustn't sweep the chapter away
     quietUntil = Math.max(quietUntil, now + AFTER_POINT_MS);
     const id = env.cakeAt(cursor.u, cursor.v);
     env.point(id);
-    env.cursor(cursor, pinching);
+    env.cursor(cursor, pinching ? 'pinch' : 'point');
     if(cursor.v > 0.9) env.scrollPage((cursor.v - 0.9) * 120);   // near the edge: bring more shelf into view
     if(cursor.v < 0.1) env.scrollPage((cursor.v - 0.1) * 120);
     if(pinchStarted && id){
-      env.point(null); env.cursor(null); cursor = null;
+      env.point(null); env.cursor(null, 'hide'); cursor = null;
       env.pick(id);
       return { claimed:true, status:'card' };
     }
@@ -755,11 +757,25 @@ const pointerEnv = {
   },
   point: id => window.recipeShelf?.point(id),
   pick: id => window.recipeShelf.pick(id),
-  cursor(c, pinching){
-    ui.cursor.hidden = !c;
-    if(!c) return;
-    ui.cursor.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
-    ui.cursor.classList.toggle('pinch', !!pinching);
+  // The oven mitt on the shelf. state: 'idle' | 'point' | 'pinch' | 'hide';
+  // c null (no hand in view): it waits where it was, faded, or in the middle
+  // of the shelf if it hasn't been anywhere yet.
+  cursor(c, state){
+    const el = ui.cursor;
+    // hidden off the shelf, and while a card is open or a cake is in the air
+    if(state === 'hide' || !this.shelfActive() || this.cardOpen() || !document.body.classList.contains('hf-on')){ el.hidden = true; return; }
+    el.hidden = false;
+    if(!c){
+      if(!el.dataset.placed){
+        const r = document.querySelector('#recipes-panel .cabinet, #recipes-panel .shelf')?.getBoundingClientRect();
+        el.style.transform = r ? `translate(${r.left + r.width / 2}px, ${r.top + r.height * .45}px)` : `translate(${innerWidth / 2}px, ${innerHeight / 2}px)`;
+      }
+      el.className = 'hf-cursor parked';
+      return;
+    }
+    el.dataset.placed = '1';
+    el.style.transform = `translate(${c.u * innerWidth}px, ${c.v * innerHeight}px)`;
+    el.className = 'hf-cursor ' + state;
   },
   scrollCard(amount){
     const body = document.querySelector('#recipe-modal .rm-body-scroll');
@@ -897,6 +913,7 @@ async function start(){
 function setHandOn(on){
   if(document.body.classList.contains('hf-on') === on) return;
   document.body.classList.toggle('hf-on', on);
+  if(!on){ ui.cursor.hidden = true; delete ui.cursor.dataset.placed; }
   setTimeout(() => window.dispatchEvent(new Event('resize')), 650);
 }
 // The book also moves later, when the cover opens: measure again each time it has moved.
