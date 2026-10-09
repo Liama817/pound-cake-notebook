@@ -978,6 +978,9 @@ function handleFrame(hand, pose, now = performance.now(), hands = hand ? [hand] 
 
 function loop(){
   if(!running) return;
+  // resting while the notebook opens: nothing needs a hand then, and the
+  // tracker would take time from the animation on every camera frame
+  if(performance.now() < restUntil){ requestAnimationFrame(loop); return; }
   const v = ui.video;
   if(v.readyState >= 2 && v.currentTime !== lastVideoTime){
     lastVideoTime = v.currentTime;
@@ -1067,6 +1070,8 @@ function stop(){
 // corner → the cover rests for 1 s → it opens onto the first history page.
 
 const COVER_PAUSE_MS = 1000;
+const OPENING_MS = 1300;     // the cover turning over and the spread settling
+let restUntil = 0;           // hand tracking rests until then (loop())
 
 function startIntro(){
   setI18n(ui.skip, 'hand.skip');
@@ -1083,46 +1088,61 @@ function endIntro(){
   holdStatus = false;
   ui.backdrop.classList.remove('open');
   document.body.classList.remove('hf-intro');
-  ui.panel.classList.remove('hero', 'greeted');
+  ui.panel.classList.remove('hero', 'greeted', 'leaving');
+  restUntil = 0;
 }
 
 function greeted(){
   setI18n(ui.status, 'hand.hello');
   holdStatus = true;
   ui.panel.classList.add('greeted');
+  // From the wave until the book is open, everything is animation: the
+  // tracker rests, so it can't make the motion stutter.
+  restUntil = performance.now() + 700 + 900 + COVER_PAUSE_MS + OPENING_MS;
+  drawHand(ui.canvas, null);
   introTimer = setTimeout(() => {
-    shrinkToCorner();
+    ui.panel.classList.add('leaving');   // the mirror's words fade first…
     introTimer = setTimeout(() => {
-      holdStatus = false;
-      if(isCoverOpen()) openNotebook();
-      // Page-turning starts once the book is open, so a lingering wave
-      // during the intro isn't read as a swipe.
-      gesture.setMode('turn');
-    }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
-  }, 700);
+      shrinkToCorner();                  // …then it becomes the print
+      introTimer = setTimeout(() => {
+        holdStatus = false;
+        if(isCoverOpen()) openNotebook();
+        // Page-turning starts once the book is open, so a lingering wave
+        // during the intro isn't read as a swipe.
+        gesture.setMode('turn');
+      }, COVER_PAUSE_MS + 900);   // 900ms = the shrink itself
+    }, 230);
+  }, 470);
 }
 
 // FLIP technique: measure the big mirror, snap it to its corner size,
 // then animate from the old box to the new one with a single transform.
+// It's the camera picture that's lined up, so the window around it can
+// change (its words gone, its frame from dark to cream) without a jump.
 function shrinkToCorner(){
-  const panel = ui.panel;
-  const first = panel.getBoundingClientRect();
+  const panel = ui.panel, pic = panel.querySelector('.hf-stage');
+  const first = pic.getBoundingClientRect();
   ui.backdrop.classList.remove('open');
   document.body.classList.remove('hf-intro');
-  panel.classList.remove('hero', 'greeted');
+  panel.classList.remove('hero', 'greeted', 'leaving');
   if(reducedMotion()) return;
-  // Measure the window's own box (offset*), not its drawn box: on a wide screen
-  // the print is drawn centred and tilted (hand-flip.css), and that transform is
-  // what the shrink ends on.
+  // Measure the boxes as laid out (offset*), not as drawn: on a wide screen
+  // the print is drawn centred and tilted (hand-flip.css), and that transform
+  // is what the shrink ends on.
+  const k = first.width / pic.offsetWidth;
   panel.style.transformOrigin = 'top left';
   panel.style.transform =
-    `translate(${first.left - panel.offsetLeft}px, ${first.top - panel.offsetTop}px) scale(${first.width / panel.offsetWidth})`;
+    `translate(${first.left - panel.offsetLeft - k * pic.offsetLeft}px, ${first.top - panel.offsetTop - k * pic.offsetTop}px) scale(${k})`;
   panel.getBoundingClientRect();   // commit the starting frame
-  panel.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1)';
+  panel.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1), background-color .7s ease';
   panel.style.transform = '';
-  panel.addEventListener('transitionend', () => {
+  // (the colour finishes first: wait for the move itself)
+  const done = e => {
+    if(e.target !== panel || e.propertyName !== 'transform') return;
+    panel.removeEventListener('transitionend', done);
     panel.style.transition = panel.style.transformOrigin = '';
-  }, { once:true });
+  };
+  panel.addEventListener('transitionend', done);
 }
 
 ui.sayHi.addEventListener('click', startIntro);

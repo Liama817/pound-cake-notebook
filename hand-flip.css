@@ -127,6 +127,13 @@ body.hf-intro .hf-toggle{visibility:hidden}
 .hf-panel.greeted{border-color:rgba(226,184,74,.85);box-shadow:0 0 0 1px rgba(226,184,74,.4),0 18px 60px rgba(0,0,0,.6)}
 .hf-panel.greeted .hf-status{color:#E2B84A}
 
+/* as the mirror becomes the print, its words fade and fold away first */
+.hf-panel.hero .hf-status,.hf-panel.hero .hf-skip{max-height:6em;overflow:hidden}
+.hf-panel.leaving .hf-status,.hf-panel.leaving .hf-skip{
+  opacity:0;max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-bottom-width:0;
+  transition:opacity .15s ease, max-height .22s ease, margin .22s ease, padding .22s ease;
+}
+
 /* Skip lives only in the big mirror */
 .hf-skip{display:none}
 .hf-panel.hero .hf-skip{
@@ -151,12 +158,13 @@ body.hf-intro .hf-toggle{visibility:hidden}
 @media (min-width:701px){
   body.hf-on{--hf-w:36vw}
   /* the page keeps a margin on its left too, and a clear gap before the print;
-     the closed cover makes room as well, as soon as the mirror becomes the print */
+     the closed cover makes room as soon as hand mode starts (behind the big
+     mirror), so nothing in the book changes size while the welcome plays */
   /* (html: book-frame.css loads later and sets the narrower corner-window gap) */
   html body.hf-on #recipes-panel.active,
   html body.hf-on #tips-panel.active,
   html body.hf-on .hb-stage:not(.closed),
-  html body.hf-on:not(.hf-intro) .hb-stage.closed{padding-left:2.4rem;padding-right:calc(var(--hf-w) + 4.6rem)}
+  html body.hf-on .hb-stage.closed{padding-left:2.4rem;padding-right:calc(var(--hf-w) + 4.6rem)}
   /* the print: a warm, bright picture of you, with your hand drawn on */
   body.hf-on .hf-panel.open:not(.hero){
     top:50%;bottom:auto;right:2.2rem;width:var(--hf-w);

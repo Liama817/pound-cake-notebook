@@ -21,8 +21,17 @@ body.hb-ready #history-panel{background:transparent}
   width:min(94vw, calc((100vh - 190px) * 1.484), 1180px);  /* 1.484 = two pages side by side */
   aspect-ratio:1.484;
   transition:transform .9s cubic-bezier(.45,0,.2,1);
-  filter:drop-shadow(0 24px 40px rgba(0,0,0,.55));
+  position:relative;
 }
+/* The book's shadow on the table: its own layer behind the pages. (A shadow
+   filter on the book would be redrawn on every frame of a page turn, which
+   made the cover's opening stutter.) Closed, it lies under the cover only. */
+.hb-book::before{
+  content:'';position:absolute;inset:1.5% .5% .5%;z-index:-1;pointer-events:none;
+  border-radius:3px;box-shadow:0 24px 46px rgba(0,0,0,.55), 0 6px 14px rgba(0,0,0,.25);
+  transform-origin:right center;transition:transform .9s cubic-bezier(.45,0,.2,1);
+}
+.hb-stage.closed:not(.opening) .hb-book::before{transform:scaleX(.5)}
 /* With autoSize off the library leaves sizing to us: fill the book box */
 .hb-book .stf__wrapper{height:100%}
 
@@ -122,8 +131,9 @@ body.hb-ready #history-panel{background:transparent}
 @media (max-width:700px){
   .hb-book{width:min(92vw, calc((100vh - 170px) * .742));aspect-ratio:.742}
   .hb-stage.closed .hb-book{transform:none}
+  .hb-stage.closed:not(.opening) .hb-book::before{transform:none}   /* one page: the cover fills the book */
 }
 
 @media (prefers-reduced-motion:reduce){
-  .hb-book{transition:none}
+  .hb-book,.hb-book::before{transition:none}
 }

@@ -22,7 +22,6 @@
 Object.assign(T.en, {
   'cc.made': 'Baked it',
   'cc.wish': 'Want to bake',
-  'cc.soon': 'one day soon',
   'cc.pm.made': 'BAKED',
   'cc.pm.wish': 'SOON',
   'cc.key.made': 'hold · baked it',
@@ -32,7 +31,6 @@ Object.assign(T.en, {
 Object.assign(T.zh, {
   'cc.made': '做过了',
   'cc.wish': '想做',
-  'cc.soon': '总有一天',
   'cc.pm.made': '做过',
   'cc.pm.wish': '想做',
   'cc.key.made': '保持 · 做过了',
@@ -278,7 +276,7 @@ function markOf(id){
 function inkFor(kind){
   ink.className = 'cc-ink ' + kind;
   const iso = bakedOn(rmCurrentId);
-  const sub = kind === 'made' ? dayText(iso) : t('cc.soon');
+  const sub = kind === 'made' ? dayText(iso) : '';   // want to bake: just the heart
   const pic = (kind === 'made' && cakePic(rmCurrentId)) || 'images/stamp/heart@2x.png';
   ink.innerHTML = '<b></b><img alt=""><i></i>';
   ink.querySelector('b').textContent = t('cc.' + kind);
