@@ -6,11 +6,10 @@
 //             its plate.
 //   Marking   "Baked it" and "Want to bake" are postage stamps in the
 //             photo's corner (the recipe's own painted slice, or a heart),
-//             postmarked with the day. Held by hand, the blank stamp arrives
-//             and the postmark's shadow comes down as the gesture is held;
-//             then the stamp shows its face and the postmark is inked over
-//             it. By the buttons, it all comes at once. The stamp stays on
-//             the card.
+//             postmarked with the day. Marked (by a held gesture or the
+//             buttons), the stamp pops up big in the middle of the card,
+//             travels to its corner and lands; then the postmark is inked
+//             over it. The stamp stays on the card.
 //   Closing   holding an open palm lets the card sink a little, as if being
 //             put away, before it turns back into the cake.
 //   Key       in hand mode, the card's foot says which gesture does what.
@@ -231,14 +230,13 @@ const tag = document.createElement('div');
 tag.className = 'cc-tag';
 tag.hidden = true;
 tag.innerHTML = '<span class="cc-sheet" aria-hidden="true"><span class="cc-paper"></span></span>'
-  + '<span class="cc-shadow" aria-hidden="true"></span><div class="cc-ink" role="img"></div>'
+  + '<div class="cc-ink" role="img"></div>'
   // the postmark: a round date stamp with wavy lines, inked over the stamp's edge
   + '<svg class="cc-postmark" viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">'
   + '<circle cx="44" cy="60" r="34"/><circle cx="44" cy="60" r="27" stroke-width="1.2"/>'
   + '<path d="M78 44q8-5 16 0t16 0t16 0M78 54q8-5 16 0t16 0t16 0M78 64q8-5 16 0t16 0t16 0M78 74q8-5 16 0t16 0t16 0"/></g>'
   + '<text class="pm-top" x="44" y="56" text-anchor="middle"></text><text class="pm-day" x="44" y="73" text-anchor="middle"></text></svg>';
 card.appendChild(tag);
-const shadow = tag.querySelector('.cc-shadow');
 const ink = tag.querySelector('.cc-ink');
 const postmark = tag.querySelector('.cc-postmark');
 // The perforated edge: a mask with small bites all round (cake-card.css).
@@ -286,46 +284,35 @@ function inkFor(kind){
   postmark.querySelector('.pm-top').textContent = t('cc.pm.' + kind);
   postmark.querySelector('.pm-day').textContent = kind === 'made' ? dayText(iso, false) : '♡';
 }
-// The stamp's shadow is driven by plain style changes and a CSS transition
-// (never by element.animate, whose finished effects can linger and pin it).
-// ms: how long it takes to get there; 0 = at once.
-function shadowTo(opacity, scale, ms = 0, easing = 'ease-in'){
-  shadow.style.transition = ms ? `opacity ${ms}ms ${easing}, transform ${ms}ms ${easing}` : 'none';
-  shadow.style.opacity = String(opacity);
-  shadow.style.transform = `scale(${scale}) rotate(-6deg)`;
-}
-const reflow = el => el.offsetWidth;
 
 // Show the card's stamp as it already is, without any motion.
 function showMark(){
   const kind = markOf(rmCurrentId);
   tag.hidden = !kind;
-  tag.classList.remove('arriving');
-  shadowTo(0, 1.35);
   if(kind){ inkFor(kind); ink.style.opacity = ''; }
   else ink.className = 'cc-ink';
 }
 
-let pressed = 0;   // how far the hand has brought the stamp down (0–1)
-
-// Lands the stamp: the postage stamp shows its face, then the postmark is
-// inked over it. From a hand hold the postmark's shadow is already down;
-// from a button it comes down quickly first.
+// Adds the stamp: it pops up big in the middle of the card, with its face
+// showing, rests a beat, then arcs over to the photo's corner and lands
+// with a little squash; then the postmark is inked over it.
+const FLY_MS = 1100;
 function stamp(kind){
   inkFor(kind);
-  const fresh = tag.hidden;
   tag.hidden = false;
-  if(reducedMotion()){ shadowTo(0, 1.35); return; }
-  if(fresh){ tag.classList.remove('arriving'); reflow(tag); tag.classList.add('arriving'); }
-  const lead = pressed > .9 ? 0 : (fresh ? 380 : 160);
-  if(lead){ shadowTo(0, 1.35); reflow(shadow); shadowTo(1, 1, lead); }
-  const markAt = lead + 260;   // the postmark comes down a moment after the face shows
-  setTimeout(() => shadowTo(0, 1, 220, 'ease-out'), markAt);   // its shadow lifts as the ink lands
-  ink.animate([
-    { opacity:0, transform:'scale(.94)' },
-    { opacity:1, transform:'scale(1.02)', offset:.6 },
-    { opacity:1, transform:'scale(1)' },
-  ], { duration:360, delay:lead, easing:'cubic-bezier(.2,.7,.3,1)', fill:'backwards' });
+  if(reducedMotion()) return;
+  // from the middle of the card (its own spot is where it ends)
+  const r = tag.getBoundingClientRect(), c = card.getBoundingClientRect();
+  const dx = (c.left + c.width / 2) - (r.left + r.width / 2), dy = (c.top + c.height / 2) - (r.top + r.height / 2);
+  tag.animate([
+    { transform:`translate(${dx}px, ${dy}px) rotate(-14deg) scale(.4)`, opacity:0, offset:0, easing:'cubic-bezier(.3,.8,.4,1.2)' },
+    { transform:`translate(${dx}px, ${dy}px) rotate(-6deg) scale(2.2)`, opacity:1, offset:.24, easing:'linear' },     // pops up in the middle
+    { transform:`translate(${dx}px, ${dy}px) rotate(-6deg) scale(2.15)`, offset:.4, easing:'cubic-bezier(.45,0,.3,1)' }, // a beat to see it
+    { transform:`translate(${dx * .38}px, ${dy * .38 - 46}px) rotate(9deg) scale(1.45)`, offset:.72, easing:'cubic-bezier(.3,0,.4,1)' }, // arcs over…
+    { transform:'translate(0, 0) rotate(0deg) scale(.93, .9)', offset:.88, easing:'ease-out' },                       // …lands
+    { transform:'none', offset:1 },
+  ], { duration:FLY_MS, fill:'backwards' });
+  const markAt = FLY_MS + 60;   // the postmark comes down once it has landed
   postmark.animate([
     { opacity:0, transform:'scale(1.25)', filter:'blur(1.5px)' },
     { opacity:.6, filter:'blur(.6px)', offset:.35 },
@@ -336,7 +323,6 @@ function stamp(kind){
     { transform:'none' }, { transform:'translateY(2px)', offset:.3 }, { transform:'none' },
   ], { duration:220, delay:markAt, easing:'ease-out' });
   setTimeout(() => burst(kind), markAt + 120);
-  pressed = 0;
 }
 
 // As the ink lands, a little burst of painted stickers rises from the tag:
@@ -383,24 +369,8 @@ let holding = null;
 function hold(kind, progress = 0){
   if(!modal.classList.contains('open')) kind = null;
   if(kind !== holding){
-    // let go early: the stamp lifts away, the card comes back up
-    if(holding === 'made' || holding === 'wish'){
-      shadowTo(0, 1.35, 200, 'ease-out');
-      if(!markOf(rmCurrentId)) tag.hidden = true;
-      pressed = 0;
-    }
-    if(holding === 'close') card.style.scale = '';
+    if(holding === 'close') card.style.scale = '';   // let go early: the card comes back up
     holding = kind;
-    if((kind === 'made' || kind === 'wish') && tag.hidden){
-      ink.className = 'cc-ink';   // a blank tag, waiting for its stamp
-      tag.hidden = false;
-      tag.classList.remove('arriving'); void tag.offsetWidth; tag.classList.add('arriving');
-    }
-  }
-  if(kind === 'made' || kind === 'wish'){
-    // the stamp comes down as the gesture is held
-    pressed = progress;
-    shadowTo(progress, 1.35 - .35 * progress);
   }
   if(kind === 'close') card.style.scale = String(1 - .035 * progress);
 }

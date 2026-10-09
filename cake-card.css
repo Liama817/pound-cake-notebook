@@ -56,19 +56,6 @@
 .cc-sheet{position:absolute;inset:0;filter:drop-shadow(0 3px 4px rgba(40,25,10,.35))}
 .cc-paper{position:absolute;inset:0;background:#FFFDF7;
   -webkit-mask:var(--perf) 0 0/100% 100% no-repeat;mask:var(--perf) 0 0/100% 100% no-repeat}
-/* it's put down as it's first needed */
-.cc-tag.arriving{animation:cc-tag-in .5s cubic-bezier(.25,.8,.3,1.1) both}
-@keyframes cc-tag-in{
-  from{opacity:0;transform:translate(40px,-34px) rotate(16deg)}
-  60% {opacity:1;transform:translate(0,0) rotate(-3deg)}
-  to  {opacity:1;transform:none}
-}
-/* the postmark's shadow, coming down over the stamp's edge */
-.cc-shadow{
-  position:absolute;left:-27px;top:60px;width:70px;height:70px;border-radius:50%;opacity:0;transform:scale(1.35) rotate(-6deg);
-  background:radial-gradient(closest-side, rgba(92,58,24,.42) 60%, rgba(92,58,24,.16) 85%, rgba(92,58,24,0));
-  filter:blur(4px);
-}
 /* the stamp's face: a tinted frame with the picture, what it means, and when */
 .cc-ink{
   position:absolute;inset:11px;display:none;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 6px;
@@ -147,7 +134,6 @@ body.hf-on #rm-card .rm-body-scroll{padding-bottom:58px}
   .cc-ink b{font-size:7.5px;letter-spacing:.1em}
   .cc-ink i{font-size:8.5px}
   .cc-postmark{left:-22px;top:26px;width:76px;height:76px}
-  .cc-shadow{left:-19px;top:40px;width:48px;height:48px}
 }
 
 /* ── pointing by hand at the shelf: the oven mitt, and a paper tag ── */
@@ -195,6 +181,6 @@ body.hf-on #rm-card .rm-body-scroll{padding-bottom:58px}
 @keyframes cc-swing{from{opacity:0;rotate:-14deg}to{opacity:1;rotate:-2deg}}
 
 @media (prefers-reduced-motion:reduce){
-  .cc-tag.arriving,.cc-nametag,.hf-cursor.parked{animation:none}
+  .cc-nametag,.hf-cursor.parked{animation:none}
   .cc-burst{display:none}
 }
